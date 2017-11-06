@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+if [ -z "$REMOTE" ]; then
+    echo "Need to set REMOTE"
+    exit 1
+fi
+
+REMOTE_DIR="~/dev/smile"
+
+ssh ${REMOTE} mkdir -p "${REMOTE_DIR}"
+rsync -r . ${REMOTE}:"${REMOTE_DIR}"
