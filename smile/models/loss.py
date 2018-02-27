@@ -3,11 +3,7 @@ import tensorflow as tf
 # TODO
 # normal gan loss
 # "stable" gan loss
-# wasserstein gan loss
-# TODO: Also see tf built in gan losses.
 
-
-# TODO: Should make sure that we reduce the patch critic correctly? I.e. first by each sample and then by batch
 
 def lsgan_losses(D_real, D_fake):
 
@@ -21,9 +17,10 @@ def lsgan_losses(D_real, D_fake):
 
 
 def wgan_gp_losses(D_real, D_fake, X_sampled, X_fake, critic_fn, wgan_lambda):
-    #if not scalar reduce within samples
-    D_real = tf.reduce_mean(D_real, axis=[1, 2, 3])
-    D_fake = tf.reduce_mean(D_fake, axis=[1, 2, 3])
+    if D_real.shape.ndims > 1:
+        axis = list(range(1, D_real.shape.ndims))
+        D_real = tf.reduce_mean(D_real, axis=axis)
+        D_fake = tf.reduce_mean(D_fake, axis=axis)
 
     # Generator loss.
     G_loss = -tf.reduce_mean(D_fake)  # Maximize critic output for fake samples.

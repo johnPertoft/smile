@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from smile.models.loss import lsgan_losses
+from smile.models.loss import lsgan_losses, wgan_gp_losses
 from smile.models.utils.reuse_scope import reuse_scope_after_first_use
 
 
@@ -15,7 +15,7 @@ def postprocess(x):
 
 
 class CycleGAN:
-    def __init__(self, A, B, generator_fn, discriminator_fn, lambda_cyclic):
+    def __init__(self, A, B, generator_fn, discriminator_fn, **hparams):
         is_training = tf.placeholder_with_default(False, [])
 
         A = preprocess(A)
@@ -48,15 +48,18 @@ class CycleGAN:
         D_B_real = discriminator_b(B)
         D_A_fake = discriminator_a(A_generated)
         D_B_fake = discriminator_b(B_generated)
-        D_A_loss, G_BA_adv_loss = lsgan_losses(D_A_real, D_A_fake)
-        D_B_loss, G_AB_adv_loss = lsgan_losses(D_B_real, D_B_fake)
+        #D_A_loss, G_BA_adv_loss = lsgan_losses(D_A_real, D_A_fake)
+        #D_B_loss, G_AB_adv_loss = lsgan_losses(D_B_real, D_B_fake)
+        wgan_lambda = hparams["wgan_lambda"]
+        D_A_loss, G_BA_adv_loss = wgan_gp_losses(D_A_real, D_A_fake, A, A_generated, discriminator_a, wgan_lambda)
+        D_B_loss, G_AB_adv_loss = wgan_gp_losses(D_B_real, D_B_fake, B, B_generated, discriminator_b, wgan_lambda)
 
         # Cyclic consistency loss.
         B_reconstructed = generator_ab(A_generated)
         A_reconstructed = generator_ba(B_generated)
         ABA_cyclic_loss = tf.reduce_mean(tf.abs(A_reconstructed - A))
         BAB_cyclic_loss = tf.reduce_mean(tf.abs(B_reconstructed - B))
-        cyclic_loss = lambda_cyclic * (ABA_cyclic_loss + BAB_cyclic_loss)
+        cyclic_loss = hparams["lambda_cyclic"] * (ABA_cyclic_loss + BAB_cyclic_loss)
 
         # Combined loss for generators.
         G_AB_loss = G_AB_adv_loss + cyclic_loss

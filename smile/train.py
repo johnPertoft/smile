@@ -1,7 +1,7 @@
 import argparse
 import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import tensorflow as tf
 
@@ -16,7 +16,8 @@ tf.logging.set_verbosity(tf.logging.INFO)
 def run_training(model_dir: Path,
                  X_paths: List[Path],
                  Y_paths: List[Path],
-                 batch_size: int):
+                 batch_size: int,
+                 **kwargs):
 
     model_dir.mkdir(parents=True, exist_ok=True)
 
@@ -25,7 +26,7 @@ def run_training(model_dir: Path,
         input_fn(Y_paths, batch_size=batch_size),
         celeb.generator,
         celeb.discriminator,
-        lambda_cyclic=5.0)
+        **kwargs)
 
     summary_writer = tf.summary.FileWriter(str(model_dir))
 
@@ -36,11 +37,18 @@ def run_training(model_dir: Path,
 
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument("--model-dir", required=False, help="directory for checkpoints etc")
-    arg_parser.add_argument("-X", nargs="+", required=True, help="tfrecord files for first image domain")
-    arg_parser.add_argument("-Y", nargs="+", required=True, help="tfrecord files for second image domain")
-    arg_parser.add_argument("--batch-size", required=True, type=int, help="batch size")
+    aa = arg_parser.add_argument
+    aa("--model-dir", required=False, help="directory for checkpoints etc")
+    aa("-X", nargs="+", required=True, help="tfrecord files for first image domain")
+    aa("-Y", nargs="+", required=True, help="tfrecord files for second image domain")
+    aa("--batch-size", required=True, type=int, help="batch size")
+
+    aa("--lambda-cyclic", type=float)
+    aa("--wgan-lambda", type=float)
+
     args = arg_parser.parse_args()
+    kwargs = {k: v for k, v in vars(args).items()
+              if v is not None and k not in ["model_dir", "X", "Y", "batch_size"]}
 
     ROOT_RUNS_DIR = Path("runs")
     if args.model_dir is None:
@@ -49,9 +57,8 @@ if __name__ == "__main__":
     else:
         model_dir = Path(args.model_dir)
 
-    run_training(model_dir, args.X, args.Y, args.batch_size)
+    run_training(model_dir, args.X, args.Y, args.batch_size, **kwargs)
 
     # TODO: also see https://arxiv.org/pdf/1611.05507.pdf
     # TODO: Preprocess data to extract only face?
     # TODO: Add attention?
-    # TODO: Try wgan-gp loss?
