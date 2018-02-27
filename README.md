@@ -9,3 +9,13 @@ $ python scripts/prepare_celeb.py --attributes-csv path/to/list_attr_celeba.txt 
 ```
 
 ## Run training
+```bash
+$ python -m smile.train -X path/to/smilerecords/* -Y path/to/not_smilerecords/* --batch-size 32
+```
+
+## Results
+Some cherrypicks.
+
+![alt text](pics/cherrypick1.png)
+
+![alt text](pics/cherrypick2.png)
