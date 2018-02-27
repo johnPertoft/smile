@@ -16,14 +16,14 @@ def lsgan_losses(D_real, D_fake):
     return D_loss, G_loss
 
 
-def wgan_gp_losses(D_real, D_fake, X_sampled, X_fake, critic_fn, wgan_lambda):
-    if D_real.shape.ndims > 1:
-        axis = list(range(1, D_real.shape.ndims))
-        D_real = tf.reduce_mean(D_real, axis=axis)
-        D_fake = tf.reduce_mean(D_fake, axis=axis)
+def wgan_gp_losses(C_real, C_fake, X_sampled, X_fake, critic_fn, wgan_lambda):
+    if C_real.shape.ndims > 1:
+        axis = list(range(1, C_real.shape.ndims))
+        C_real = tf.reduce_mean(C_real, axis=axis)
+        C_fake = tf.reduce_mean(C_fake, axis=axis)
 
     # Generator loss.
-    G_loss = -tf.reduce_mean(D_fake)  # Maximize critic output for fake samples.
+    G_loss = -tf.reduce_mean(C_fake)  # Maximize critic output for fake samples.
 
     # Gradient penalty.
     epsilon = tf.random_uniform(shape=tf.shape(X_fake)[:1], minval=0.0, maxval=1.0)
@@ -36,8 +36,8 @@ def wgan_gp_losses(D_real, D_fake, X_sampled, X_fake, critic_fn, wgan_lambda):
     gradient_penalty = wgan_lambda * tf.reduce_mean(tf.square(C_X_interpolate_grads_norm - 1.0))
 
     # Discriminator loss.
-    D_real_loss = -tf.reduce_mean(D_real)  # Maximize critic output for real samples.
-    D_fake_loss = tf.reduce_mean(D_fake)  # Minimize critic output for fake samples.
+    D_real_loss = -tf.reduce_mean(C_real)  # Maximize critic output for real samples.
+    D_fake_loss = tf.reduce_mean(C_fake)  # Minimize critic output for fake samples.
     D_loss = D_real_loss + D_fake_loss + gradient_penalty
 
     return D_loss, G_loss
