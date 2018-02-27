@@ -48,6 +48,7 @@ class CycleGAN:
         D_B_real = discriminator_b(B)
         D_A_fake = discriminator_a(A_generated)
         D_B_fake = discriminator_b(B_generated)
+        # TODO: Refactor this.
         #D_A_loss, G_BA_adv_loss = lsgan_losses(D_A_real, D_A_fake)
         #D_B_loss, G_AB_adv_loss = lsgan_losses(D_B_real, D_B_fake)
         wgan_lambda = hparams["wgan_lambda"]
@@ -126,22 +127,33 @@ class CycleGAN:
         ))
 
         # TODO: possibly run on separate batches instead.
-        train_op = tf.group(D_A_optimization_step,
+        """
+        self.train_op = tf.group(D_A_optimization_step,
                             G_AB_optimization_step,
                             D_B_optimization_step,
                             G_BA_optimization_step,
                             global_step.assign_add(1))
+        """
+
+        self.discriminator_step = tf.group(D_A_optimization_step, D_B_optimization_step)
+        self.generator_step = tf.group(G_AB_optimization_step, G_BA_optimization_step, global_step.assign_add(1))
 
         self.A_generated = A_generated
         self.B_generated = B_generated
-        self.train_op = train_op
         self.global_step = global_step
         self.scalar_summaries = scalar_summaries
         self.image_summaries = image_summaries
 
     def train_step(self, sess, summary_writer):
-        _, scalar_summaries, i = sess.run((self.train_op, self.scalar_summaries, self.global_step))
+        # TODO: Refactor.
 
+        #_, scalar_summaries, i = sess.run((self.train_op, self.scalar_summaries, self.global_step))
+
+        # Multiple steps with discriminator for wgan.
+        for _ in range(5):
+            sess.run(self.discriminator_step)
+
+        _, scalar_summaries, i = sess.run((self.generator_step, self.scalar_summaries, self.global_step))
         summary_writer.add_summary(scalar_summaries, i)
 
         if i > 0 and i % 1000 == 0:
