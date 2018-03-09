@@ -113,7 +113,6 @@ class CycleGAN:
         ))
 
         # TODO: gradient summaries.
-
         # TODO: Show heatmap of discriminator output.
         # TODO: Show heatmap of what discriminator cares about? should be mainly mouth etc.
 
@@ -129,6 +128,7 @@ class CycleGAN:
                             G_BA_optimization_step,
                             global_step.assign_add(1))
 
+        self.is_training = is_training
         self.A_generated = A_generated
         self.B_generated = B_generated
         self.train_op = train_op
@@ -137,7 +137,11 @@ class CycleGAN:
         self.image_summaries = image_summaries
 
     def train_step(self, sess, summary_writer):
-        _, scalar_summaries, i = sess.run((self.train_op, self.scalar_summaries, self.global_step))
+        feed_dict = {
+            self.is_training: True
+        }
+
+        _, scalar_summaries, i = sess.run((self.train_op, self.scalar_summaries, self.global_step), feed_dict=feed_dict)
 
         summary_writer.add_summary(scalar_summaries, i)
 
