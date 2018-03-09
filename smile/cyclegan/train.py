@@ -5,8 +5,8 @@ from typing import List, Optional
 
 import tensorflow as tf
 
-from smile.models.cycle_gan import CycleGAN
-from smile.models.architectures import celeb
+from smile.cyclegan import CycleGAN
+from smile.cyclegan.architectures import celeb
 from smile.data.input import input_fn
 
 
