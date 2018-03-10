@@ -1,13 +1,13 @@
 import argparse
 import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 import tensorflow as tf
 
 from smile.cyclegan import CycleGAN
 from smile.cyclegan.architectures import celeb
-from smile.data.input import input_fn
+from smile.cyclegan.input import celeb_input_fn
 
 
 tf.logging.set_verbosity(tf.logging.INFO)
@@ -21,8 +21,8 @@ def run_training(model_dir: Path,
     model_dir.mkdir(parents=True, exist_ok=True)
 
     cycle_gan = CycleGAN(
-        input_fn(X_paths, batch_size=batch_size),
-        input_fn(Y_paths, batch_size=batch_size),
+        celeb_input_fn(X_paths, batch_size=batch_size),
+        celeb_input_fn(Y_paths, batch_size=batch_size),
         celeb.generator,
         celeb.discriminator,
         lambda_cyclic=5.0)
