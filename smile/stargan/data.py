@@ -12,9 +12,8 @@ _CELEB_A_SHAPE = (218, 178, 3)
 def celeb_input_fn(tfrecords_paths, considered_attributes, num_epochs=None, batch_size=64):
     """Return input tensors (img, label)."""
 
-    attributes_column = tf.feature_column.indicator_column(
-        tf.feature_column.categorical_column_with_vocabulary_list("attributes", considered_attributes,
-                                                                  num_oov_buckets=1))
+    # Note: One oov bucket for all non considered attributes.
+    attribute_index = tf.contrib.lookup.index_table_from_tensor(considered_attributes, num_oov_buckets=1)
 
     def parse_serialized(serialized_example):
         features = tf.parse_single_example(
@@ -27,31 +26,27 @@ def celeb_input_fn(tfrecords_paths, considered_attributes, num_epochs=None, batc
         img = tf.cast(img, tf.float32)
         img = img / 255
 
-        # TODO: Or build a lookup table instead if this doesnt work.
-
-        attributes = features["attributes"]
-        #attributes = tf.feature_column.input_layer(features, attributes_column, trainable=False)
-        attributes = tf.sparse_to_dense(attributes.indices, [50], attributes.values, default_value="hej")
-
-        print(img)
-        print(attributes)
-        exit()
-
-        # tf.sparse_tensor_to_dense(attributes, default_value="hej".encode("ascii"))
-
-        # TODO: Map features to indicator vector based on `considered_attributes`?
+        # Considered attributes as indicator vector.
+        attributes = attribute_index.lookup(features["attributes"])
+        attributes = tf.sparse_to_indicator(attributes, len(considered_attributes) + 1)  # +1 for the oov bucket.
+        attributes = attributes[:-1]  # Skip the oov bucket since those attributes should not be considered.
+        attributes = tf.cast(attributes, tf.float32)
 
         return img, attributes
 
-    def at_least_one_considered_attribute():
-        pass
+    def at_least_one_considered_attribute(img, attributes):
+        return tf.logical_not(tf.reduce_all(tf.equal(attributes, 0.0)))
+
+    # TODO: Skip the dataset and do it the old way.
 
     return (tf.data.TFRecordDataset(tfrecords_paths)
             .map(parse_serialized)
+            .filter(at_least_one_considered_attribute)
             .shuffle(1024)
             .repeat(num_epochs)
             .batch(batch_size)
-            .make_one_shot_iterator().get_next())
+            .make_initializable_iterator())
+            #.make_one_shot_iterator().get_next())
 
 
 def prepare_celeb(celeb_root_dir: Union[str, Path]):
