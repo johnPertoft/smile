@@ -9,8 +9,8 @@ from tqdm import tqdm
 _CELEB_A_SHAPE = (218, 178, 3)
 
 
-def celeb_input_fn(tfrecords_paths, considered_attributes, num_epochs=None, batch_size=64):
-    """Return input tensors (img, label)."""
+def celeb_input_iterator(tfrecords_paths, considered_attributes, num_epochs=None, batch_size=64):
+    """Return initializable iterator for input tensors (img, label)."""
 
     # Note: One oov bucket for all non considered attributes.
     attribute_index = tf.contrib.lookup.index_table_from_tensor(considered_attributes, num_oov_buckets=1)
@@ -37,8 +37,6 @@ def celeb_input_fn(tfrecords_paths, considered_attributes, num_epochs=None, batc
     def at_least_one_considered_attribute(img, attributes):
         return tf.logical_not(tf.reduce_all(tf.equal(attributes, 0.0)))
 
-    # TODO: Skip the dataset and do it the old way.
-
     return (tf.data.TFRecordDataset(tfrecords_paths)
             .map(parse_serialized)
             .filter(at_least_one_considered_attribute)
@@ -46,7 +44,6 @@ def celeb_input_fn(tfrecords_paths, considered_attributes, num_epochs=None, batc
             .repeat(num_epochs)
             .batch(batch_size)
             .make_initializable_iterator())
-            #.make_one_shot_iterator().get_next())
 
 
 def prepare_celeb(celeb_root_dir: Union[str, Path]):

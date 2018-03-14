@@ -1,19 +1,39 @@
 import argparse
 import datetime
 from pathlib import Path
+from typing import Any, Dict, List
 
 import tensorflow as tf
 
 from smile.stargan import StarGAN
+from smile.stargan.architectures import celeb
+from smile.stargan.data import celeb_input_iterator
 
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
-def run_training(model_dir: Path):
+def run_celeb_training(model_dir: Path,
+                       tfrecord_paths: List[str],
+                       considered_attributes: List[str],
+                       hparams: Dict[str, Any]):
+
     model_dir.mkdir(parents=True, exist_ok=True)
 
-    star_gan = StarGAN()
+    celeb_iterator = celeb_input_iterator(
+        tfrecord_paths,
+        considered_attributes,
+        batch_size=hparams["batch_size"])
+
+    imgs, attributes = celeb_iterator.get_next()
+
+    star_gan = StarGAN(
+        imgs,
+        attributes,
+        celeb.generator,
+        celeb.discriminator,
+        hparams["lambda_cls"],
+        hparams["lambda_rec"])
 
     summary_writer = tf.summary.FileWriter(str(model_dir))
 
@@ -25,9 +45,7 @@ def run_training(model_dir: Path):
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("--model-dir", required=False, help="directory for checkpoints etc")
-    #arg_parser.add_argument("-X", nargs="+", required=True, help="tfrecord files for first image domain")
-    #arg_parser.add_argument("-Y", nargs="+", required=True, help="tfrecord files for second image domain")
-    #arg_parser.add_argument("--batch-size", required=True, type=int, help="batch size")
+    arg_parser.add_argument("-f", nargs="+", required=True, help="tfrecords files for stargan")
     args = arg_parser.parse_args()
 
     ROOT_RUNS_DIR = Path("runs")
@@ -37,4 +55,17 @@ if __name__ == "__main__":
     else:
         model_dir = Path(args.model_dir)
 
-    run_training(model_dir)
+    # TODO: Get this from program args.
+    hparams = {
+        "batch_size": 16,
+        "lambda_cls": 1.0,
+        "lambda_rec": 10.0
+    }
+
+    considered_attributes = ["Smiling", "Black_Hair", "Blond_Hair", "Brown_Hair", "Bald"]
+
+    run_celeb_training(
+        model_dir,
+        ["/home/john/datasets/celeb/tfrecords/stargan/shard-1"],
+        considered_attributes,
+        hparams)
