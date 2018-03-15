@@ -25,6 +25,7 @@ def run_celeb_training(model_dir: Path,
         considered_attributes,
         batch_size=hparams["batch_size"])
 
+    init = tf.group(tf.tables_initializer(), celeb_iterator.initializer)
     imgs, attributes = celeb_iterator.get_next()
 
     star_gan = StarGAN(
@@ -37,15 +38,21 @@ def run_celeb_training(model_dir: Path,
 
     summary_writer = tf.summary.FileWriter(str(model_dir))
 
-    with tf.train.MonitoredTrainingSession(checkpoint_dir=str(model_dir), save_summaries_secs=30) as sess:
-        while not sess.should_stop():
+    #with tf.train.MonitoredTrainingSession(checkpoint_dir=str(model_dir), save_summaries_secs=30) as sess:
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
+        sess.run(init)
+
+        #while not sess.should_stop():
+        while True:
             star_gan.train_step(sess, summary_writer)
 
 
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("--model-dir", required=False, help="directory for checkpoints etc")
-    arg_parser.add_argument("-f", nargs="+", required=True, help="tfrecords files for stargan")
+    arg_parser.add_argument("--tfrecords", nargs="+", required=True, help="tfrecords files for stargan")
     args = arg_parser.parse_args()
 
     ROOT_RUNS_DIR = Path("runs")
@@ -66,6 +73,6 @@ if __name__ == "__main__":
 
     run_celeb_training(
         model_dir,
-        ["/home/john/datasets/celeb/tfrecords/stargan/shard-1"],
+        args.tfrecords,
         considered_attributes,
         hparams)

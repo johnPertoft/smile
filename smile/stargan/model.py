@@ -70,12 +70,26 @@ class StarGAN:
             tf.summary.scalar("g_loss", g_loss)
         ))
 
-        #image_summaries = tf.summary.merge((
-        #    tf.summary.image()
-        #))
+        image_summaries = tf.summary.image("translations", postprocess(translated_imgs))  # TODO: Add comparison images.
+
+        self.train_op = train_step
+        self.global_step = global_step
+        self.is_training = is_training
+        self.scalar_summaries = scalar_summaries
+        self.image_summaries = image_summaries
 
     def train_step(self, sess, summary_writer):
-        pass
+        feed_dict = {
+            self.is_training: True
+        }
+
+        _, scalar_summaries, i = sess.run((self.train_op, self.scalar_summaries, self.global_step), feed_dict=feed_dict)
+
+        summary_writer.add_summary(scalar_summaries, i)
+
+        if i > 0 and i % 1000 == 0:
+            image_summaries = sess.run(self.image_summaries)
+            summary_writer.add_summary(image_summaries, i)
 
     def export(self):
         pass

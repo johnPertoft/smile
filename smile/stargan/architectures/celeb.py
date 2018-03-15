@@ -84,12 +84,49 @@ def generator(X, is_training):
     return net
 
 
-def discriminator(X, n_attributes):
-    # TODO: output whether real/false with patch gan
-    # TODO: output domain/attribute classificaion also
-    # TODO: linear output to allow for different losses
+def discriminator(X, n_attributes, is_training):
+    weight_initializer = tf.truncated_normal_initializer(stddev=0.02)
 
+    def conv4_stride2_k(inputs, k):
+        return tf.layers.conv2d(
+            inputs,
+            kernel_size=(4, 4),
+            strides=(2, 2),
+            filters=k,
+            activation=None,
+            kernel_initializer=weight_initializer,
+            use_bias=False,
+            padding="same")
 
-    # TODO: at last layer, one conv with 1 filter and one conv with #attributes filter.
+    lrelu = tf.nn.leaky_relu
+    norm = tf.contrib.layers.instance_norm
 
-    pass
+    # TODO: See paper.
+
+    # Net definition.
+    net = X
+    net = lrelu(conv4_stride2_k(net, 64))
+    net = lrelu(norm(conv4_stride2_k(net, 128)))
+    net = lrelu(norm(conv4_stride2_k(net, 256)))
+    net = lrelu(norm(conv4_stride2_k(net, 512)))
+
+    # Patch GAN output for whether discriminator thinks the image is real/fake.
+    disc = tf.layers.conv2d(
+        net,
+        kernel_size=(4, 4),
+        strides=(1, 1),
+        filters=1,
+        activation=None,
+        padding="same")
+
+    # TODO: What should the dimensions of this be? (?, n_attributes) or patch gan?
+    predicted_attributes_logits = tf.layers.conv2d(
+        net,
+        kernel_size=(4, 4),
+        strides=(1, 1),
+        filters=n_attributes,
+        activation=None,
+        padding="same")
+    predicted_attributes_logits = tf.reduce_mean(predicted_attributes_logits, axis=[1, 2])  # Global average pooling.
+
+    return disc, predicted_attributes_logits

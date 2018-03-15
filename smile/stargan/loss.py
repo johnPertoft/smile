@@ -13,8 +13,8 @@ def attribute_classification_losses(d_real_predicted_attributes,
                                     target_attributes):
 
     # TODO: Do we want to do this even?
-    d_real_predicted_attributes = patches_to_scalar(d_real_predicted_attributes)
-    d_fake_predicted_attributes = patches_to_scalar(d_fake_predicted_attributes)
+    #d_real_predicted_attributes = patches_to_scalar(d_real_predicted_attributes)
+    #d_fake_predicted_attributes = patches_to_scalar(d_fake_predicted_attributes)
 
     d_classification_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=actual_attributes,
                                                                                    logits=d_real_predicted_attributes))
