@@ -33,7 +33,10 @@ class StarGAN:
         discriminator = tf.make_template("discriminator", discriminator_fn,
                                          n_attributes=n_attributes, is_training=is_training)
 
-        target_attributes = None  # TODO: Generate target attributes. placeholder with default?
+        # TODO: Generate target_attributes in a better way. I.e. original attribute shouldn't be there.
+        # TODO: Some attributes should also be mutually exclusive, like hair colors.
+        target_attributes = \
+            tf.cast(tf.random_uniform(shape=tf.shape(attributes), dtype=tf.int32, maxval=2), tf.float32)
         translated_imgs = generator(concat_attributes(imgs, target_attributes))
 
         # Adversarial loss.
