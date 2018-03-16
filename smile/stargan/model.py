@@ -70,7 +70,8 @@ class StarGAN:
             tf.summary.scalar("g_loss", g_loss)
         ))
 
-        image_summaries = tf.summary.image("translations", postprocess(translated_imgs))  # TODO: Add comparison images.
+        # TODO: Add target attributes to image summaries.
+        image_summaries = tf.summary.image("A_to_B", postprocess(tf.concat((imgs[:3], translated_imgs[:3]), axis=2)))
 
         self.train_op = train_step
         self.global_step = global_step
