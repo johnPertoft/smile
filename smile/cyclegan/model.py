@@ -1,7 +1,6 @@
 import tensorflow as tf
 
-from smile.models.loss import lsgan_losses
-from smile.models.utils.reuse_scope import reuse_scope_after_first_use
+from smile.cyclegan.loss import lsgan_losses
 
 
 def preprocess(x):
@@ -35,13 +34,20 @@ class CycleGAN:
         A_generated = generator_ba(B)
         B_generated = generator_ab(A)
 
+        global_step = tf.train.get_or_create_global_step()
+
         # TODO: Read paper again, need to have a buffer of history of some of the generated/translated images.
         # However, it wasn't clear which ones to actually keep. They used a buffer size of 50 I think. Does this
         # mean one from each of 50 update steps back or something else?
         with tf.variable_scope("history"):
-            #generated_history_A = tf.get_variable()
-            #generated_history_B = tf.get_variable()
-            pass
+            buffer_size = 50
+            history_shape = [buffer_size] + A_generated.shape.as_list()[1:]
+            generated_history_A = tf.get_variable(name="A", initializer=tf.zeros(history_shape, tf.float32))
+            generated_history_B = tf.get_variable(name="B", initializer=tf.zeros(history_shape, tf.float32))
+            current_index = global_step % buffer_size
+            update_history = tf.group(
+                generated_history_A[current_index].assign(A_generated[0]),
+                generated_history_B[current_index].assign(B_generated[0]))
 
         # Adversarial loss (lsgan loss).
         D_A_real = discriminator_a(A)
@@ -61,8 +67,6 @@ class CycleGAN:
         # Combined loss for generators.
         G_AB_loss = G_AB_adv_loss + cyclic_loss
         G_BA_loss = G_BA_adv_loss + cyclic_loss
-
-        global_step = tf.train.get_or_create_global_step()
 
         initial_learning_rate = 2e-4
         start_decay_step = 100 * 5_000  # Rough estimate of 100 epochs.
@@ -126,7 +130,8 @@ class CycleGAN:
                             G_AB_optimization_step,
                             D_B_optimization_step,
                             G_BA_optimization_step,
-                            global_step.assign_add(1))
+                            global_step.assign_add(1),
+                            update_history)
 
         self.is_training = is_training
         self.A_generated = A_generated
