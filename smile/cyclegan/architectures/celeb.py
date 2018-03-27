@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 
-def generator(X, is_training):
+def generator(X, is_training, **hparams):
     weight_initializer = tf.truncated_normal_initializer(stddev=0.02)
 
     def conv7_stride1_k(inputs, k):

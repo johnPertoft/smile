@@ -15,7 +15,7 @@ def postprocess(x):
 
 
 class CycleGAN:
-    def __init__(self, A, B, generator_fn, discriminator_fn, lambda_cyclic):
+    def __init__(self, A, B, generator_fn, discriminator_fn, **hparams):
         is_training = tf.placeholder_with_default(False, [])
 
         A = preprocess(A)
@@ -26,10 +26,10 @@ class CycleGAN:
         A = A[:, 1:-1, 1:-1, :]
         B = B[:, 1:-1, 1:-1, :]
 
-        discriminator_a = tf.make_template("discriminator_A", discriminator_fn, is_training=is_training)
-        discriminator_b = tf.make_template("discriminator_B", discriminator_fn, is_training=is_training)
-        generator_ab = tf.make_template("generator_AB", generator_fn, is_training=is_training)
-        generator_ba = tf.make_template("generator_BA", generator_fn, is_training=is_training)
+        discriminator_a = tf.make_template("discriminator_A", discriminator_fn, is_training=is_training, **hparams)
+        discriminator_b = tf.make_template("discriminator_B", discriminator_fn, is_training=is_training, **hparams)
+        generator_ab = tf.make_template("generator_AB", generator_fn, is_training=is_training, **hparams)
+        generator_ba = tf.make_template("generator_BA", generator_fn, is_training=is_training, **hparams)
 
         # Translations.
         A_generated = generator_ba(B)
@@ -56,7 +56,7 @@ class CycleGAN:
         A_reconstructed = generator_ba(B_generated)
         ABA_cyclic_loss = tf.reduce_mean(tf.abs(A_reconstructed - A))
         BAB_cyclic_loss = tf.reduce_mean(tf.abs(B_reconstructed - B))
-        cyclic_loss = lambda_cyclic * (ABA_cyclic_loss + BAB_cyclic_loss)
+        cyclic_loss = hparams["lambda_cyclic"] * (ABA_cyclic_loss + BAB_cyclic_loss)
 
         # Combined loss for generators.
         G_AB_loss = G_AB_adv_loss + cyclic_loss
