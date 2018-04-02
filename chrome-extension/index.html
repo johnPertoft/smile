@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://unpkg.com/deeplearn@latest"></script>
+</head>
+<body>
+<script>
+
+    function conv(x, cw, n_filters, strides) {
+        const indepth = x.shape[3];
+        const kernel = dl.variable(dl.randomNormal([cw, cw, indepth, n_filters]));
+        //const bias
+        return dl.conv2d(x, kernel, strides, 'valid');
+    }
+
+    function resblock(x, n_filters) {
+        let net = x;
+
+        net = conv(net, 3, n_filters, 1);
+        net = dl.relu(net);
+
+        net = conv(net, 3, n_filters, 1);
+
+        return dl.add(x, net);
+    }
+
+    function deconv(x, cw, n_filters, strides) {
+        let net = x;
+
+        // TODO
+
+        return x
+    }
+
+    const img = dl.randomNormal([1, 216, 176, 3]);
+
+    const relu = dl.relu;
+    const norm = x => x;  // TODO: Layernorm.
+
+    // Cycle GAN generator graph.
+    let net = img;
+    net = relu(norm(conv(net, 7, 32, 1)));
+    net = relu(norm(conv(net, 3, 64, 2)));
+    net = relu(norm(conv(net, 3, 128, 2)));
+    for (let i = 0; i < 6; i++) {
+        net = resblock(net, 128);
+    }
+
+    net.data().then(data => console.log(data));
+
+    /*
+    net = X
+    net = relu(norm(conv7_stride1_k(net, 32)))
+    net = relu(norm(conv3_stride2_k(net, 64)))
+    net = relu(norm(conv3_stride2_k(net, 128)))
+    for i in range(6):
+        net = res_block(net, 128)
+    net = relu(norm(deconv3_stride2_k(net, 64)))
+    net = relu(norm(deconv3_stride2_k(net, 32)))
+    net = tf.nn.tanh(conv7_stride1_k(net, 3))
+
+    return net
+     */
+</script>
+</body>
+</html>

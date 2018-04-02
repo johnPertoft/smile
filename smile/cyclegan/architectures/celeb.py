@@ -6,7 +6,8 @@ def generator(X, is_training, **hparams):
 
     def conv7_stride1_k(inputs, k):
         """7x7, 1 strided convolution with k filters."""
-        padded = tf.pad(inputs, [[0, 0], [3, 3], [3, 3], [0, 0]], "reflect")
+        #padded = tf.pad(inputs, [[0, 0], [3, 3], [3, 3], [0, 0]], "reflect")
+        padded = tf.pad(inputs, [[0, 0], [3, 3], [3, 3], [0, 0]], "constant")  # TODO: For tf.js compatibility.
         return tf.layers.conv2d(
             padded,
             kernel_size=(7, 7),
@@ -87,7 +88,7 @@ def generator(X, is_training, **hparams):
     return net
 
 
-def discriminator(X, is_training):
+def discriminator(X, is_training, **hparams):
     weight_initializer = tf.truncated_normal_initializer(stddev=0.02)
 
     def conv4_stride2_k(inputs, k):
