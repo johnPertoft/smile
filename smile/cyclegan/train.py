@@ -44,7 +44,8 @@ if __name__ == "__main__":
 
     hparams = {
         "batch_size": args.batch_size,
-        "lambda_cyclic": 5.0
+        "lambda_cyclic": 5.0,
+        "use_history": False
     }
 
     ROOT_RUNS_DIR = Path("runs")

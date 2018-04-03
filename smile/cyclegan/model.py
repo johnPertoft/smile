@@ -39,15 +39,17 @@ class CycleGAN:
         # TODO: Read paper again, need to have a buffer of history of some of the generated/translated images.
         # However, it wasn't clear which ones to actually keep. They used a buffer size of 50 I think. Does this
         # mean one from each of 50 update steps back or something else?
-        with tf.variable_scope("history"):
-            buffer_size = 50
-            history_shape = [buffer_size] + A_generated.shape.as_list()[1:]
-            generated_history_A = tf.get_variable(name="A", initializer=tf.zeros(history_shape, tf.float32))
-            generated_history_B = tf.get_variable(name="B", initializer=tf.zeros(history_shape, tf.float32))
-            current_index = global_step % buffer_size
-            update_history = tf.group(
-                generated_history_A[current_index].assign(A_generated[0]),
-                generated_history_B[current_index].assign(B_generated[0]))
+        update_history = None
+        if hparams["use_history"]:
+            with tf.variable_scope("history"):
+                buffer_size = 50
+                history_shape = [buffer_size] + A_generated.shape.as_list()[1:]
+                generated_history_A = tf.get_variable(name="A", initializer=tf.zeros(history_shape, tf.float32))
+                generated_history_B = tf.get_variable(name="B", initializer=tf.zeros(history_shape, tf.float32))
+                current_index = global_step % buffer_size
+                update_history = tf.group(
+                    generated_history_A[current_index].assign(A_generated[0]),
+                    generated_history_B[current_index].assign(B_generated[0]))
 
         # Adversarial loss (lsgan loss).
         D_A_real = discriminator_a(A)
@@ -126,12 +128,12 @@ class CycleGAN:
         ))
 
         # TODO: possibly run on separate batches instead.
-        train_op = tf.group(D_A_optimization_step,
-                            G_AB_optimization_step,
-                            D_B_optimization_step,
-                            G_BA_optimization_step,
-                            global_step.assign_add(1),
-                            update_history)
+        train_step_ops = [D_A_optimization_step, D_B_optimization_step,
+                          G_AB_optimization_step, G_BA_optimization_step,
+                          global_step.assign_add(1)]
+        if update_history is not None:
+            train_step_ops.append(update_history)
+        train_op = tf.group(*train_step_ops)
 
         self.is_training = is_training
         self.A_generated = A_generated
