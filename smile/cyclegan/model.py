@@ -4,13 +4,17 @@ from smile.cyclegan.loss import lsgan_losses
 
 
 def preprocess(x):
-    """[0, 1] -> [-1, 1]"""
-    return x * 2 - 1
+    h, w = x.shape[1:-1]
+    x = x * 2 - 1
+    x = tf.image.resize_images(x, [h - 1, w - 1])
+    return x
 
 
 def postprocess(x):
-    """[-1, 1] -> [0, 1]"""
-    return (x + 1) / 2
+    h, w = x.shape[1:-1]
+    x = tf.image.resize_images(x, [h + 1, w + 1])
+    x = (x + 1) / 2
+    return x
 
 
 class CycleGAN:
@@ -19,11 +23,6 @@ class CycleGAN:
 
         A = preprocess(A)
         B = preprocess(B)
-
-        # TODO: Solve dimension problems in another way. Maybe just resize it.
-        # Skipping top and bottom rows as well as left and rightmost columns of each image.
-        A = A[:, 1:-1, 1:-1, :]
-        B = B[:, 1:-1, 1:-1, :]
 
         discriminator_a = tf.make_template("discriminator_A", discriminator_fn, is_training=is_training, **hparams)
         discriminator_b = tf.make_template("discriminator_B", discriminator_fn, is_training=is_training, **hparams)
