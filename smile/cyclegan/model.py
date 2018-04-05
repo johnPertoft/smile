@@ -36,9 +36,9 @@ class CycleGAN:
 
         global_step = tf.train.get_or_create_global_step()
 
-        # TODO: Read paper again, need to have a buffer of history of some of the generated/translated images.
-        # However, it wasn't clear which ones to actually keep. They used a buffer size of 50 I think. Does this
-        # mean one from each of 50 update steps back or something else?
+        # TODO: Read paper again.
+        # I think paper used batch size 1, but we can just pick the first image per batch for higher batch sizes
+        # I guess.
         update_history = None
         if hparams["use_history"]:
             with tf.variable_scope("history"):
@@ -89,7 +89,10 @@ class CycleGAN:
 
         # TODO: from paper:
         # "In practice, we divide the objective by 2 while optimizing D"
-        # Just divide D_A_loss and D_B_loss?
+        #D_A_loss = D_A_loss * 0.5
+        #D_B_loss = D_B_loss * 0.5
+
+        # TODO: Colors after translations are a bit muted, figure out why.
 
         def get_vars(scope):
             return tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)

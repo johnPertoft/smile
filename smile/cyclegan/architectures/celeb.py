@@ -33,7 +33,7 @@ def generator(X, is_training, **hparams):
         net = inputs
 
         # Layer 1.
-        net = tf.pad(inputs, [[0, 0], [1, 1], [1, 1], [0, 0]], "reflect")
+        net = tf.pad(net, [[0, 0], [1, 1], [1, 1], [0, 0]], "reflect")
         net = tf.layers.conv2d(
             net,
             kernel_size=(3, 3),
