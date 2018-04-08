@@ -19,3 +19,10 @@ Some cherrypicks.
 ![alt text](pics/cherrypick1.png)
 
 ![alt text](pics/cherrypick2.png)
+
+## TODO
+
+### CycleGAN
+* WGAN-GP loss
+* Densenet architecture(s)
+* "Muted" color issue
