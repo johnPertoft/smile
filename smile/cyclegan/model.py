@@ -6,13 +6,13 @@ from smile.cyclegan.loss import lsgan_losses
 def preprocess(x):
     h, w = x.shape[1:-1]
     x = x * 2 - 1
-    x = tf.image.resize_images(x, [h - 1, w - 1])
+    x = tf.image.resize_images(x, [h - 2, w - 2])
     return x
 
 
 def postprocess(x):
     h, w = x.shape[1:-1]
-    x = tf.image.resize_images(x, [h + 1, w + 1])
+    x = tf.image.resize_images(x, [h + 2, w + 2])
     x = (x + 1) / 2
     return x
 
@@ -41,6 +41,7 @@ class CycleGAN:
         update_history = None
         if hparams["use_history"]:
             with tf.variable_scope("history"):
+                # TODO: tfgan implementation randomly samples from history and current. Try this?
                 buffer_size = 50
                 history_shape = [buffer_size] + A_generated.shape.as_list()[1:]
                 generated_history_A = tf.get_variable(name="A", initializer=tf.zeros(history_shape, tf.float32))
@@ -97,7 +98,7 @@ class CycleGAN:
             return tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
 
         def create_update_step(loss, variables):
-            return tf.train.AdamOptimizer(learning_rate).minimize(loss, var_list=variables)
+            return tf.train.AdamOptimizer(learning_rate, beta1=0.5).minimize(loss, var_list=variables)
 
         D_A_optimization_step = create_update_step(D_A_loss, get_vars("discriminator_A"))
         D_B_optimization_step = create_update_step(D_B_loss, get_vars("discriminator_B"))
