@@ -62,3 +62,5 @@ if __name__ == "__main__":
     # TODO: Preprocess data to extract only face?
     # TODO: Add attention?
     # TODO: Try wgan-gp loss?
+    # TODO: Try different upsampling techniques
+    # TODO: Try other architectures.
