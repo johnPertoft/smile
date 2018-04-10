@@ -1,5 +1,21 @@
 import tensorflow as tf
 
+from smile.unit.loss import vae_loss, gan_losses
+
+
+def preprocess(x):
+    h, w = x.shape[1:-1]
+    x = x * 2 - 1
+    x = tf.image.resize_images(x, [h - 2, w - 2])
+    return x
+
+
+def postprocess(x):
+    h, w = x.shape[1:-1]
+    x = tf.image.resize_images(x, [h + 2, w + 2])
+    x = (x + 1) / 2
+    return
+
 
 class UNIT:
     def __init__(self,
@@ -38,18 +54,12 @@ class UNIT:
         z_a = z_mu_a + tf.random_normal(tf.shape(z_mu_a), stddev=1.0)
         z_b = z_mu_b + tf.random_normal(tf.shape(z_mu_b), stddev=1.0)
 
-        a_reconstructed = decoder_a(z_a)
-        b_reconstructed = decoder_b(z_b)
+        # Translations.
+        a_translated = decoder_a(z_b)
+        b_translated = decoder_b(z_a)
 
-        # TODO: Losses depend on
-        # vae_a, vae_b
-        # gan_a, gan_b
-
-        prior = tf.distributions.Normal(loc=tf.zeros_like(z_a), scale=tf.ones_like(z_a))
-
-        kl_div_a = tf.distributions.kl_divergence(
-            tf.distributions.Normal(loc=z_a, scale=tf.ones_like(z_a)),
-            prior)
-        kl_div_b = tf.distributions.kl_divergence(
-            tf.distributions.Normal(loc=z_b, scale=tf.ones_like(z_b)),
-            prior)
+        # Losses.
+        vae_loss_a = vae_loss(A, decoder_a(z_a), z_a)
+        vae_loss_b = vae_loss(B, decoder_b(z_b), z_b)
+        disc_loss_a, gen_loss_a = gan_losses(discriminator_a(A), discriminator_a(a_translated))
+        disc_loss_b, gen_loss_b = gan_losses(discriminator_b(B), discriminator_b(b_translated))
