@@ -8,6 +8,7 @@ import tensorflow as tf
 from smile.cyclegan import CycleGAN
 from smile.cyclegan.architectures import celeb
 from smile.cyclegan.input import celeb_input_fn
+from smile import utils
 
 
 tf.logging.set_verbosity(tf.logging.INFO)
@@ -23,8 +24,8 @@ def run_training(model_dir: Path,
     cycle_gan = CycleGAN(
         celeb_input_fn(X_paths, batch_size=hparams["batch_size"]),
         celeb_input_fn(Y_paths, batch_size=hparams["batch_size"]),
-        celeb.generator,
-        celeb.discriminator,
+        celeb.GENERATORS[hparams["generator_architecture"]],
+        celeb.DISCRIMINATORS[hparams["discriminator_architecture"]],
         **hparams)
 
     summary_writer = tf.summary.FileWriter(str(model_dir))
@@ -35,24 +36,23 @@ def run_training(model_dir: Path,
 
 
 if __name__ == "__main__":
-    arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument("--model-dir", required=False, help="directory for checkpoints etc")
-    arg_parser.add_argument("-X", nargs="+", required=True, help="tfrecord files for first image domain")
-    arg_parser.add_argument("-Y", nargs="+", required=True, help="tfrecord files for second image domain")
-    arg_parser.add_argument("--batch-size", required=True, type=int, help="batch size")
-    args = arg_parser.parse_args()
+    arg_parser = utils.ArgumentParser()
+    arg_parser.add_argument("--model-dir", required=False, help="Directory for checkpoints etc.")
+    arg_parser.add_argument("-X", nargs="+", required=True, help="Tfrecord files for first image domain.")
+    arg_parser.add_argument("-Y", nargs="+", required=True, help="Tfrecord files for second image domain.")
 
-    hparams = {
-        "batch_size": args.batch_size,
-        "lambda_cyclic": 5.0,
-        "use_history": False
-    }
+    arg_parser.add_hparam("batch-size", default=16, type=int, help="Batch size.")
+    arg_parser.add_hparam("generator-architecture", default="paper", help="Architecture for generator network.")
+    arg_parser.add_hparam("discriminator-architecture", default="paper", help="Architecture for discriminator network.")
+    arg_parser.add_hparam("lambda-cyclic", default=5.0, type=float, help="Cyclic consistency loss weight.")
+    arg_parser.add_hparam("use-history", action="store_true",
+                          help="Whether a history of generated images should be shown to the discriminator.")
+
+    args, hparams = arg_parser.parse_args()
 
     ROOT_RUNS_DIR = Path("runs")
     if args.model_dir is None:
-        timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H.%M.%S')
-        model_description = "_".join(f"{k}={hparams[k]}" for k in sorted(hparams.keys()))
-        model_dir = ROOT_RUNS_DIR / Path(f"cyclegan_{timestamp}_{model_description}")
+        model_dir = ROOT_RUNS_DIR / Path(utils.experiment_name("cyclegan", hparams))
     else:
         model_dir = Path(args.model_dir)
 
@@ -64,3 +64,4 @@ if __name__ == "__main__":
     # TODO: Try wgan-gp loss?
     # TODO: Try different upsampling techniques
     # TODO: Try other architectures.
+    # TODO: Pass in facial landmark information during training
