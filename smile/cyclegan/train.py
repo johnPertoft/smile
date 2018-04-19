@@ -1,5 +1,3 @@
-import argparse
-import datetime
 from pathlib import Path
 from typing import List
 
@@ -47,6 +45,7 @@ if __name__ == "__main__":
     arg_parser.add_hparam("lambda-cyclic", default=5.0, type=float, help="Cyclic consistency loss weight.")
     arg_parser.add_hparam("use-history", action="store_true",
                           help="Whether a history of generated images should be shown to the discriminator.")
+    arg_parser.add_hparam("growth-rate", default=16, type=int, help="Growth rate for densenet architecture.")
 
     args, hparams = arg_parser.parse_args()
 
@@ -65,3 +64,4 @@ if __name__ == "__main__":
     # TODO: Try different upsampling techniques
     # TODO: Try other architectures.
     # TODO: Pass in facial landmark information during training
+    # TODO: Allow gpu mem growth

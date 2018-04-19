@@ -1,3 +1,5 @@
+import functools
+
 import tensorflow as tf
 
 
@@ -208,69 +210,65 @@ def densenet_generator(X, is_training, **hparams):
             use_bias=False,
             padding="valid")
 
-    def conv3_stride2_k(inputs, k):
-        """3x3, 2 strided convolution with k filters."""
-        return tf.layers.conv2d(
-            inputs,
-            kernel_size=(3, 3),
-            strides=(2, 2),
-            filters=k,
-            activation=None,
-            kernel_initializer=weight_initializer,
-            use_bias=False,
-            padding="same")
+    def dense_block(x, n_layers, activation, norm):
+        def conv(l):
+            return tf.layers.conv2d(
+                tf.pad(l, [[0, 0], [1, 1], [1, 1], [0, 0]], "reflect"),
+                kernel_size=(3, 3),
+                strides=(1, 1),
+                filters=hparams["growth_rate"],
+                use_bias=False,
+                padding="valid")
 
-    def deconv3_stride2_k(inputs, k):
-        """3x3. 2 strided deconvolution (transposed convolution) with k filters."""
-        return tf.layers.conv2d_transpose(
-            inputs,
-            kernel_size=(3, 3),
-            strides=(2, 2),
-            filters=k,
-            activation=None,
-            kernel_initializer=weight_initializer,
-            use_bias=False,
-            padding="same")
+        # TODO: bottleneck layers
+        # Composite function.
+        def H(l):
+            l = norm(l)
+            l = activation(l)
+            l = conv(l)
+            return l
 
-    def dense_block(inputs, n_layers):
-
+        prev_layers = [x]
         for _ in range(n_layers):
-            pass
+            x = H(tf.concat(prev_layers, axis=3))
+            prev_layers.append(x)
 
-    def transition(inputs):
-        pass
-        # convolution + pooling/strides/upsampling?
-        # or bn, relu, conv = "composite function" from paper
+        return x
 
-    activation = tf.nn.elu  # tf.nn.relu  # TODO: Choose from hparams instead.
+    def transition(x, sample_direction, n_filters):
+        assert sample_direction in ("up", "down")
+        conv = tf.layers.conv2d if sample_direction == "down" else tf.layers.conv2d_transpose
+        # TODO: Paper has 1x1 conv + 2x2 pooling, keep the 1x1?
+        # TODO: activation here as well
+        return conv(
+            x, #tf.pad(x, [[0, 0], [1, 1], [1, 1], [0, 0]], "reflect"),  # TODO: dim issues
+            kernel_size=(3, 3),
+            strides=(2, 2),
+            filters=n_filters,
+            use_bias=False,
+            padding="same")
+
+    activation = tf.nn.elu  # tf.nn.relu
     norm = tf.contrib.layers.instance_norm
 
-    # TODO: Don't know if this makes sense. Just replaced resnet block with some densely connected
-    # conv layers compared to paper_generator atm.
-    # Maybe better to do denseblock->down/upscaling->denseblock etc
+    dense_block = functools.partial(dense_block, activation=activation, norm=norm)
 
     # Net definition.
     net = X
     net = activation(norm(conv7_stride1_k(net, 16)))
-    net = dense_block()
-    net = transition_downsample()
-    net = dense_block()
-    net = transition_upsample()
-    # something like this
-
-    # Net definition.
-    net = X
-    net = activation(norm(conv7_stride1_k(net, 32)))
-    net = activation(norm(conv3_stride2_k(net, 64)))  # downsample
-    net = activation(norm(conv3_stride2_k(net, 128)))  # downsample
-    for _ in range(6):
-        net = dense_block(net)
-    net = activation(norm(deconv3_stride2_k(net, 64)))  # upsample
-    net = activation(norm(deconv3_stride2_k(net, 32)))  # upsample
+    net = dense_block(net, 3)
+    net = transition(net, "down", 64)
+    net = dense_block(net, 3)
+    net = transition(net, "down", 128)
+    net = dense_block(net, 3)
+    net = transition(net, "up", 128)
+    net = dense_block(net, 3)
+    net = transition(net, "up", 64)
     net = tf.nn.tanh(conv7_stride1_k(net, 3))
 
     return net
 
+# TODO: densenet discriminator
 
 GENERATORS = {
     "paper": paper_generator,

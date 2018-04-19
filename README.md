@@ -25,4 +25,6 @@ Some cherrypicks.
 ### CycleGAN
 * WGAN-GP loss
 * Densenet architecture(s)
-* "Muted" color issue
+* "Muted" color issue, solved?
+* DTN model
+* DA-gan model
