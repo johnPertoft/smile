@@ -3,6 +3,12 @@ import datetime
 from typing import Any, Dict
 
 
+def experiment_name(modelname: str, hparams: Dict[str, Any]):
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H.%M.%S')
+    hparams_string = "_".join(f"{k}={hparams[k]}" for k in sorted(hparams.keys()))
+    return f"{modelname}_{timestamp}_{hparams_string}"
+
+
 class ArgumentParser(argparse.ArgumentParser):
     """Adds a method on top of `ArgumentParser` to separate hparams from other input args."""
 
@@ -30,9 +36,3 @@ class ArgumentParser(argparse.ArgumentParser):
                 args.__dict__.pop(k)
 
         return args, hparams
-
-
-def experiment_name(modelname: str, hparams: Dict[str, Any]):
-    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H.%M.%S')
-    hparams_string = "_".join(f"{k}={hparams[k]}" for k in sorted(hparams.keys()))
-    return f"{modelname}_{timestamp}_{hparams_string}"

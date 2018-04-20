@@ -1,16 +1,22 @@
 # Smile
 
-## Prerequisites
-* Download [celeb dataset](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html).
-
-## Prepare tfrecords
+## Download and Prepare Dataset
 ```bash
-$ python scripts/prepare_celeb.py --attributes-csv path/to/list_attr_celeba.txt --img-dir path/to/img_align_celeba --output-dir path/to/output --attribute Smiling
+$ python -m smile.utils.create_dataset --dataset-dir datasets/celeb --attribute Smiling
 ```
 
 ## Run training
 ```bash
-$ python -m smile.train -X path/to/smilerecords/* -Y path/to/not_smilerecords/* --batch-size 32
+$ python -m smile.cyclegan.train \
+    --X-train datasets/celeb/tfrecords/smiling/train/* \
+    --X-test datasets/celeb/tfrecords/smiling/test/* \
+    --Y-train datasets/celeb/tfrecords/not_smiling/train/* \
+    --Y-test datasets/celeb/tfrecords/not_smiling/test/*
+```
+
+For more options:
+```bash
+$ python -m smile.cyclegan.train --help
 ```
 
 ## Results
@@ -26,5 +32,8 @@ Some cherrypicks.
 * WGAN-GP loss
 * Densenet architecture(s)
 * "Muted" color issue, solved?
+
+### Other models
+* unit
 * DTN model
 * DA-gan model
