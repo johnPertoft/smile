@@ -13,15 +13,19 @@ tf.logging.set_verbosity(tf.logging.INFO)
 
 
 def run_training(model_dir: Path,
-                 X_paths: List[Path],
-                 Y_paths: List[Path],
+                 X_train_paths: List[Path],
+                 X_test_paths: List[Path],
+                 Y_train_paths: List[Path],
+                 Y_test_paths: List[Path],
                  **hparams):
 
     model_dir.mkdir(parents=True, exist_ok=True)
 
     cycle_gan = CycleGAN(
-        celeb_input_fn(X_paths, batch_size=hparams["batch_size"]),
-        celeb_input_fn(Y_paths, batch_size=hparams["batch_size"]),
+        celeb_input_fn(X_train_paths, batch_size=hparams["batch_size"]),
+        celeb_input_fn(X_test_paths, batch_size=8),
+        celeb_input_fn(Y_train_paths, batch_size=hparams["batch_size"]),
+        celeb_input_fn(Y_test_paths, batch_size=8),
         celeb.GENERATORS[hparams["generator_architecture"]],
         celeb.DISCRIMINATORS[hparams["discriminator_architecture"]],
         **hparams)
@@ -36,8 +40,10 @@ def run_training(model_dir: Path,
 if __name__ == "__main__":
     arg_parser = utils.ArgumentParser()
     arg_parser.add_argument("--model-dir", required=False, help="Directory for checkpoints etc.")
-    arg_parser.add_argument("-X", nargs="+", required=True, help="Tfrecord files for first image domain.")
-    arg_parser.add_argument("-Y", nargs="+", required=True, help="Tfrecord files for second image domain.")
+    arg_parser.add_argument("--X-train", nargs="+", required=True, help="Tfrecord train files for first image domain.")
+    arg_parser.add_argument("--X-test", nargs="+", required=True, help="Tfrecord test files for first image domain.")
+    arg_parser.add_argument("--Y-train", nargs="+", required=True, help="Tfrecord train files for second image domain.")
+    arg_parser.add_argument("--Y-test", nargs="+", required=True, help="Tfrecord test files for second image domain.")
 
     arg_parser.add_hparam("batch-size", default=16, type=int, help="Batch size.")
     arg_parser.add_hparam("generator-architecture", default="paper", help="Architecture for generator network.")
@@ -55,7 +61,13 @@ if __name__ == "__main__":
     else:
         model_dir = Path(args.model_dir)
 
-    run_training(model_dir, args.X, args.Y, **hparams)
+    run_training(
+        model_dir,
+        args.X_train,
+        args.X_test,
+        args.Y_train,
+        args.Y_test,
+        **hparams)
 
     # TODO: also see https://arxiv.org/pdf/1611.05507.pdf
     # TODO: Preprocess data to extract only face?

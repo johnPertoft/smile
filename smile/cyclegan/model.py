@@ -18,7 +18,14 @@ def postprocess(x):
 
 
 class CycleGAN:
-    def __init__(self, A, B, generator_fn, discriminator_fn, **hparams):
+    def __init__(self,
+                 A_train, A_test,
+                 B_train, B_test,
+                 generator_fn, discriminator_fn,
+                 **hparams):
+
+        A = A_train
+        B = B_train
         is_training = tf.placeholder_with_default(False, [])
 
         A = preprocess(A)
@@ -30,8 +37,8 @@ class CycleGAN:
         generator_ba = tf.make_template("generator_BA", generator_fn, is_training=is_training, **hparams)
 
         # Translations.
-        A_generated = generator_ba(B)
-        B_generated = generator_ab(A)
+        A_translated = generator_ba(B)
+        B_translated = generator_ab(A)
 
         global_step = tf.train.get_or_create_global_step()
 
@@ -43,25 +50,25 @@ class CycleGAN:
             with tf.variable_scope("history"):
                 # TODO: tfgan implementation randomly samples from history and current. Try this?
                 buffer_size = 50
-                history_shape = [buffer_size] + A_generated.shape.as_list()[1:]
+                history_shape = [buffer_size] + A_translated.shape.as_list()[1:]
                 generated_history_A = tf.get_variable(name="A", initializer=tf.zeros(history_shape, tf.float32))
                 generated_history_B = tf.get_variable(name="B", initializer=tf.zeros(history_shape, tf.float32))
                 current_index = global_step % buffer_size
                 update_history = tf.group(
-                    generated_history_A[current_index].assign(A_generated[0]),
-                    generated_history_B[current_index].assign(B_generated[0]))
+                    generated_history_A[current_index].assign(A_translated[0]),
+                    generated_history_B[current_index].assign(B_translated[0]))
 
         # Adversarial loss (lsgan loss).
         D_A_real = discriminator_a(A)
         D_B_real = discriminator_b(B)
-        D_A_fake = discriminator_a(A_generated)
-        D_B_fake = discriminator_b(B_generated)
+        D_A_fake = discriminator_a(A_translated)
+        D_B_fake = discriminator_b(B_translated)
         D_A_loss, G_BA_adv_loss = lsgan_losses(D_A_real, D_A_fake)
         D_B_loss, G_AB_adv_loss = lsgan_losses(D_B_real, D_B_fake)
 
         # Cyclic consistency loss.
-        B_reconstructed = generator_ab(A_generated)
-        A_reconstructed = generator_ba(B_generated)
+        B_reconstructed = generator_ab(A_translated)
+        A_reconstructed = generator_ba(B_translated)
         ABA_cyclic_loss = tf.reduce_mean(tf.abs(A_reconstructed - A))
         BAB_cyclic_loss = tf.reduce_mean(tf.abs(B_reconstructed - B))
         cyclic_loss = hparams["lambda_cyclic"] * (ABA_cyclic_loss + BAB_cyclic_loss)
@@ -89,10 +96,8 @@ class CycleGAN:
 
         # TODO: from paper:
         # "In practice, we divide the objective by 2 while optimizing D"
-        #D_A_loss = D_A_loss * 0.5
-        #D_B_loss = D_B_loss * 0.5
-
-        # TODO: Colors after translations are a bit muted, figure out why.
+        D_A_loss = D_A_loss * 0.5
+        D_B_loss = D_B_loss * 0.5
 
         def get_vars(scope):
             return tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
@@ -121,13 +126,19 @@ class CycleGAN:
             tf.summary.scalar("learning_rate", learning_rate)
         ))
 
+        # TODO: Add some separate summaries for test images.
         # TODO: gradient summaries.
         # TODO: Show heatmap of discriminator output.
         # TODO: Show heatmap of what discriminator cares about? should be mainly mouth etc.
 
+        A_translated_test = postprocess(generator_ba(preprocess(B_test)))
+        B_translated_test = postprocess(generator_ab(preprocess(A_test)))
+
         image_summaries = tf.summary.merge((
-            tf.summary.image("A_to_B", postprocess(tf.concat((A[:3], B_generated[:3]), axis=2))),
-            tf.summary.image("B_to_A", postprocess(tf.concat((B[:3], A_generated[:3]), axis=2)))
+            tf.summary.image("A_to_B_train", tf.concat((postprocess(A[:3]), postprocess(B_translated[:3])), axis=2)),
+            tf.summary.image("B_to_A_train", tf.concat((postprocess(B[:3]), postprocess(A_translated[:3])), axis=2)),
+            tf.summary.image("A_to_B_test", tf.concat((A_test[:3], B_translated_test[:3]), axis=2)),
+            tf.summary.image("B_to_A_test", tf.concat((B_test[:3], A_translated_test[:3]), axis=2))
         ))
 
         # TODO: possibly run on separate batches instead.
@@ -139,20 +150,17 @@ class CycleGAN:
         train_op = tf.group(*train_step_ops)
 
         self.is_training = is_training
-        self.A_generated = A_generated
-        self.B_generated = B_generated
+        self.A_generated = A_translated
+        self.B_generated = B_translated
         self.train_op = train_op
         self.global_step = global_step
         self.scalar_summaries = scalar_summaries
         self.image_summaries = image_summaries
 
     def train_step(self, sess, summary_writer):
-        feed_dict = {
-            self.is_training: True
-        }
-
-        _, scalar_summaries, i = sess.run((self.train_op, self.scalar_summaries, self.global_step), feed_dict=feed_dict)
-
+        _, scalar_summaries, i = sess.run(
+            (self.train_op, self.scalar_summaries, self.global_step),
+            feed_dict={self.is_training: True})
         summary_writer.add_summary(scalar_summaries, i)
 
         if i > 0 and i % 1000 == 0:
