@@ -8,4 +8,4 @@ fi
 REMOTE_DIR="~/dev/smile"
 
 ssh ${REMOTE} mkdir -p "${REMOTE_DIR}"
-rsync -r --exclude datasets . ${REMOTE}:"${REMOTE_DIR}"
+rsync -r --exclude datasets --exclude runs . ${REMOTE}:"${REMOTE_DIR}"
