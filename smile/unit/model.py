@@ -71,7 +71,15 @@ class UNIT:
         decoder_a = lambda z: decoder_a_private(decoder_shared(z))
         decoder_b = lambda z: decoder_b_private(decoder_shared(z))
 
-        # TODO: Make functions for the different "streams".
+        # TODO: Define eta sampling somewhere.
+
+        def translate_a_to_b(a):
+            z_mu = encoder_a(a)
+            return decoder_b(z_mu + tf.random_normal(tf.shape(z_mu), stddev=1.0))
+
+        def translate_b_to_a(b):
+            z_mu = encoder_b(b)
+            return decoder_a(z_mu + tf.random_normal(tf.shape(z_mu), stddev=1.0))
 
         # Discriminator subgraphs.
         discriminator_a = tf.make_template("discriminator_a", discriminator_fn, is_training=is_training, **hparams)
@@ -113,11 +121,47 @@ class UNIT:
             create_update_step(generative_loss, get_vars("(encoder|decoder)")),
             global_step.assign_add(1))
 
+        # TODO: Add summaries for parts of the losses here, i.e. vae_loss = kl + nll losses
+        scalar_summaries = tf.summary.merge((
+            tf.summary.scalar("loss/vae_loss_a", vae_loss_a),
+            tf.summary.scalar("loss/vae_loss_b", vae_loss_b),
+            tf.summary.scalar("loss/gen_loss_a", gen_loss_a),
+            tf.summary.scalar("loss/gen_loss_b", gen_loss_b),
+            tf.summary.scalar("loss/disc_loss_a", disc_loss_a),
+            tf.summary.scalar("loss/disc_loss_b", disc_loss_b),
+            tf.summary.scalar("loss/cyclic_loss_a", cyclic_loss_a),
+            tf.summary.scalar("loss/cyclic_loss_b", cyclic_loss_b),
+            tf.summary.scalar("disc_a/real", tf.reduce_mean(discriminator_a(A))),
+            tf.summary.scalar("disc_a/fake", tf.reduce_mean(discriminator_a(a_translated))),
+            tf.summary.scalar("disc_b/real", tf.reduce_mean(discriminator_b(B))),
+            tf.summary.scalar("disc_b/fake", tf.reduce_mean(discriminator_b(b_translated))),
+            tf.summary.scalar("learning_rate", learning_rate)
+        ))
+
+        # TODO: Move out image comparison summary elsewhere. Used for every model.
+        a_translated_test = postprocess(translate_b_to_a(preprocess(B_test)))
+        b_translated_test = postprocess(translate_a_to_b(preprocess(A_test)))
+        image_summaries = tf.summary.merge((
+            tf.summary.image("A_to_B_train", tf.concat((A_train[:3], postprocess(b_translated[:3])), axis=2)),
+            tf.summary.image("B_to_A_train", tf.concat((B_train[:3], postprocess(a_translated[:3])), axis=2)),
+            tf.summary.image("A_to_B_test", tf.concat((A_test[:3], b_translated_test[:3]), axis=2)),
+            tf.summary.image("B_to_A_test", tf.concat((B_test[:3], a_translated_test[:3]), axis=2))
+        ))
+
         self.a_translated = a_translated
         self.b_translated = b_translated
         self.is_training = is_training
         self.train_op = train_op
         self.global_step = global_step
+        self.scalar_summaries = scalar_summaries
+        self.image_summaries = image_summaries
 
     def train_step(self, sess, summary_writer):
-        pass
+        _, scalar_summaries, i = sess.run(
+            (self.train_op, self.scalar_summaries, self.global_step),
+            feed_dict={self.is_training: True})
+        summary_writer.add_summary(scalar_summaries, i)
+
+        if i > 0 and i % 1000 == 0:
+            image_summaries = sess.run(self.image_summaries)
+            summary_writer.add_summary(image_summaries, i)
