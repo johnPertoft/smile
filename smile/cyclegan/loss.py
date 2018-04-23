@@ -25,6 +25,8 @@ def lsgan_losses(D_real, D_fake):
 def wgan_gp_losses(D_real, D_fake, X_sampled, X_fake, critic_fn, wgan_lambda):
     """Wasserstein GAN loss with gradient penalty."""
 
+    # TODO: Fix this, run experiment with.
+
     #if not scalar reduce within samples
     D_real = tf.reduce_mean(D_real, axis=[1, 2, 3])
     D_fake = tf.reduce_mean(D_fake, axis=[1, 2, 3])
