@@ -23,18 +23,27 @@ def run_training(model_dir: Path,
 
     cycle_gan = CycleGAN(
         celeb_input_fn(X_train_paths, batch_size=hparams["batch_size"]),
-        celeb_input_fn(X_test_paths, batch_size=8),
+        celeb_input_fn(X_test_paths, batch_size=4),
         celeb_input_fn(Y_train_paths, batch_size=hparams["batch_size"]),
-        celeb_input_fn(Y_test_paths, batch_size=8),
+        celeb_input_fn(Y_test_paths, batch_size=4),
         celeb.GENERATORS[hparams["generator_architecture"]],
         celeb.DISCRIMINATORS[hparams["discriminator_architecture"]],
         **hparams)
 
     summary_writer = tf.summary.FileWriter(str(model_dir))
 
+    max_training_steps = 250000
+
     with tf.train.MonitoredTrainingSession(checkpoint_dir=str(model_dir), save_summaries_secs=30) as sess:
         while not sess.should_stop():
-            cycle_gan.train_step(sess, summary_writer)
+            i = cycle_gan.train_step(sess, summary_writer)
+            if i > max_training_steps:
+                break
+
+    # Note: tf.train.MonitoredTrainingSession finalizes the graph so can't export from it.
+    with tf.Session() as sess:
+        tf.train.Saver().restore(sess, tf.train.latest_checkpoint(str(model_dir)))
+        cycle_gan.export(sess, str(model_dir / "export"))
 
 
 if __name__ == "__main__":

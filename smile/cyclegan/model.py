@@ -126,7 +126,6 @@ class CycleGAN:
             tf.summary.scalar("learning_rate", learning_rate)
         ))
 
-        # TODO: Add some separate summaries for test images.
         # TODO: gradient summaries.
         # TODO: Show heatmap of discriminator output.
         # TODO: Show heatmap of what discriminator cares about? should be mainly mouth etc.
@@ -149,6 +148,7 @@ class CycleGAN:
             train_step_ops.append(update_history)
         train_op = tf.group(*train_step_ops)
 
+        # Handles for training.
         self.is_training = is_training
         self.A_generated = A_translated
         self.B_generated = B_translated
@@ -156,6 +156,12 @@ class CycleGAN:
         self.global_step = global_step
         self.scalar_summaries = scalar_summaries
         self.image_summaries = image_summaries
+
+        # Handles for exporting.
+        self.A_input = tf.placeholder(tf.float32, [None] + A_train.get_shape().as_list()[1:])
+        self.B_translated = postprocess(generator_ab(preprocess(self.A_input)))
+        self.B_input = tf.placeholder(tf.float32, [None] + B_train.get_shape().as_list()[1:])
+        self.A_translated = postprocess(generator_ba(preprocess(self.B_input)))
 
     def train_step(self, sess, summary_writer):
         _, scalar_summaries, i = sess.run(
@@ -167,5 +173,25 @@ class CycleGAN:
             image_summaries = sess.run(self.image_summaries)
             summary_writer.add_summary(image_summaries, i)
 
-    def export(self):
-        pass
+        return i
+
+    def export(self, sess, export_dir):
+        builder = tf.saved_model.builder.SavedModelBuilder(export_dir)
+
+        # TODO: Only include the necessary parts of the graph.
+
+        def translation_signature(input_img, translated_img):
+            return tf.saved_model.signature_def_utils.build_signature_def(
+                inputs={"input": tf.saved_model.utils.build_tensor_info(input_img)},
+                outputs={"translation": tf.saved_model.utils.build_tensor_info(translated_img)},
+                method_name=tf.saved_model.signature_constants.PREDICT_METHOD_NAME)
+
+        builder.add_meta_graph_and_variables(
+            sess,
+            [tf.saved_model.tag_constants.SERVING],
+            signature_def_map={
+                "translate_ab": translation_signature(self.A_input, self.B_translated),
+                "translate_ba": translation_signature(self.B_input, self.A_translated)
+            })
+
+        return builder.save()
