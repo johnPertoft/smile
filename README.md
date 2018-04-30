@@ -32,6 +32,7 @@ Some cherrypicks.
 * WGAN-GP loss
 * Densenet architecture(s)
 * "Muted" color issue, solved?
+* spectral normalization
 
 ### Other models
 * unit

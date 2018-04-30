@@ -156,6 +156,7 @@ class UNIT:
         self.scalar_summaries = scalar_summaries
         self.image_summaries = image_summaries
 
+    # TODO: Need to do profiling here.
     def train_step(self, sess, summary_writer):
         _, scalar_summaries, i = sess.run(
             (self.train_op, self.scalar_summaries, self.global_step),
