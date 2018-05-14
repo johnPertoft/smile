@@ -22,9 +22,9 @@ def run_training(model_dir: Path,
     model_dir.mkdir(parents=True, exist_ok=True)
 
     cycle_gan = CycleGAN(
-        celeb_input_fn(X_train_paths, batch_size=hparams["batch_size"]),
+        celeb_input_fn(X_train_paths, batch_size=hparams["batch_size"], data_augmentation=True),
         celeb_input_fn(X_test_paths, batch_size=4),
-        celeb_input_fn(Y_train_paths, batch_size=hparams["batch_size"]),
+        celeb_input_fn(Y_train_paths, batch_size=hparams["batch_size"], data_augmentation=True),
         celeb_input_fn(Y_test_paths, batch_size=4),
         celeb.GENERATORS[hparams["generator_architecture"]],
         celeb.DISCRIMINATORS[hparams["discriminator_architecture"]],

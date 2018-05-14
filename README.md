@@ -33,6 +33,8 @@ Some cherrypicks.
 * Densenet architecture(s)
 * "Muted" color issue, solved?
 * spectral normalization
+* progressive growing
+* data augmentation
 
 ### Other models
 * unit
