@@ -28,15 +28,22 @@ Some cherrypicks.
 
 ## TODO
 
+* Consider resizing to 128x128 as most papers do.
+
 ### CycleGAN
 * WGAN-GP loss
 * Densenet architecture(s)
-* "Muted" color issue, solved?
-* spectral normalization
-* progressive growing
-* data augmentation
+* Spectral normalization
+* Progressive growing
+* Attention mechanism
+* Facial landmarks as supervision
 
 ### Other models
-* unit
-* DTN model
+* DiscoGAN
+* StarGAN (working code, bad results)
+* UNIT (working code, bad results)
+* MUNIT
+* DTN
+* XGAN
 * DA-gan model
+* AttGAN
