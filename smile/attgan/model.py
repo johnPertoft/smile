@@ -17,6 +17,8 @@ class AttGAN:
         is_training = tf.placeholder_with_default(False, [])
         x_test = None  # TODO: input pipeline with test images.
 
+        # TODO: preprocess/postprocess [-1, 1] etc
+
         _cd_shared = tf.make_template("classifier_discriminator_shared", classifier_discriminator_shared_fn, **hparams)
         _d_private = tf.make_template("discriminator_private", discriminator_private_fn)
         _c_private = tf.make_template("classifier_private", classifier_private_fn)
