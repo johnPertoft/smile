@@ -7,6 +7,8 @@ class AttGAN:
     def __init__(self,
                  img,
                  attributes,
+                 img_test,
+                 attributes_test,
                  encoder_fn,
                  decoder_fn,
                  classifier_discriminator_shared_fn,
@@ -108,8 +110,15 @@ class AttGAN:
         self.scalar_summaries = scalar_summaries
         self.image_summaries = image_summaries
 
-    def train_step(self):
-        pass
+    def train_step(self, sess, summary_writer):
+        _, scalar_summaries, i = sess.run(
+            (self.train_step, self.scalar_summaries, self.global_step),
+            feed_dict={self.is_training: True})
+        summary_writer.add_summary(scalar_summaries, i)
+
+        if i > 0 and i % 1000 == 0:
+            image_summaries = sess.run(self.image_summaries)
+            summary_writer.add_summary(image_summaries, i)
 
     def export(self):
         pass
