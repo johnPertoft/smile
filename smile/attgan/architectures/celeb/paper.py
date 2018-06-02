@@ -3,8 +3,8 @@ import tensorflow as tf
 
 def encoder(img, is_training, **hparams):
     def conv_bn_lrelu(x, d, k, s):
-        x = tf.layers.conv2d(x, filters=d, kernel_size=k, strides=s)
-        x = tf.layers.batch_normalization(x, is_training=is_training)
+        x = tf.layers.conv2d(x, filters=d, kernel_size=k, strides=s, padding="same")
+        x = tf.layers.batch_normalization(x, training=is_training)
         x = tf.nn.leaky_relu(x)
         return x
 
@@ -21,8 +21,8 @@ def encoder(img, is_training, **hparams):
 
 def decoder(z, attributes, is_training, **hparams):
     def deconv_bn_relu(x, d, k, s):
-        x = tf.layers.conv2d_transpose(x, filters=d, kernel_size=k, strides=s)
-        x = tf.layers.batch_normalization(x, is_training=is_training)
+        x = tf.layers.conv2d_transpose(x, filters=d, kernel_size=k, strides=s, padding="same")
+        x = tf.layers.batch_normalization(x, training=is_training)
         x = tf.nn.relu(x)
         return x
 
@@ -34,7 +34,8 @@ def decoder(z, attributes, is_training, **hparams):
     net = deconv_bn_relu(net, 512, 4, 2)
     net = deconv_bn_relu(net, 256, 4, 2)
     net = deconv_bn_relu(net, 128, 4, 2)
-    net = tf.layers.conv2d_transpose(net, filters=3, kernel_size=4, strides=2, activation=tf.nn.tanh)
+    net = tf.layers.conv2d_transpose(net, filters=3, kernel_size=4, strides=2, padding="same")
+    net = tf.nn.tanh(net)
 
     return net
 

@@ -5,7 +5,7 @@ import tensorflow as tf
 
 from smile.attgan import AttGAN
 from smile.attgan.architectures import celeb
-from smile.attgan.input import celeb_input_fn
+from smile.utils.data.input import input_fn_with_attributes
 from smile import utils
 
 tf.logging.set_verbosity(tf.logging.INFO)
@@ -19,12 +19,16 @@ def run_training(model_dir: Path,
 
     model_dir.mkdir(parents=True, exist_ok=True)
 
-    img_train, attributes_train = \
-        celeb_input_fn(train_tfrecord_paths, considered_attributes, batch_size=hparams["batch_size"])
+    train_dataset = input_fn_with_attributes(train_tfrecord_paths, considered_attributes, hparams["batch_size"])
+    test_dataset = input_fn_with_attributes(test_tfrecord_paths, considered_attributes, 3)
 
-    # TODO: Return sample op for test attributes instead.
-    img_test, attributes_test = \
-        celeb_input_fn(test_tfrecord_paths, considered_attributes, batch_size=3)
+    train_iterator = train_dataset.make_initializable_iterator()
+    test_iterator = test_dataset.make_initializable_iterator()
+
+    img_train, attributes_train = train_iterator.get_next()
+    img_test, attributes_test = test_iterator.get_next()
+
+    iterator_initializer = tf.group(train_iterator.initializer, test_iterator.initializer)
 
     attgan = AttGAN(
         img_train, attributes_train,
@@ -38,8 +42,20 @@ def run_training(model_dir: Path,
 
     summary_writer = tf.summary.FileWriter(str(model_dir))
 
-    with tf.train.MonitoredTrainingSession(checkpoint_dir=str(model_dir), save_summaries_secs=30) as sess:
-        pass
+    scaffold = tf.train.Scaffold(local_init_op=tf.group(
+        tf.local_variables_initializer(),
+        tf.tables_initializer(),
+        iterator_initializer))
+
+    with tf.train.MonitoredTrainingSession(
+            scaffold=scaffold,
+            checkpoint_dir=str(model_dir),
+            save_summaries_secs=30) as sess:
+
+        _, attr = sess.run((img_train, attributes_train))
+        print(attr)
+        exit()
+
 
 if __name__ == "__main__":
     arg_parser = utils.ArgumentParser()
@@ -62,11 +78,12 @@ if __name__ == "__main__":
     else:
         model_dir = Path(args.model_dir)
 
-    # TODO: Param for this. Handle mutual exclusiveness.
-    considered_attributes = ["Smiling", "Black_Hair", "Blond_Hair", "Brown_Hair", "Bald"]
+    # TODO: Param for this. Handle mutual exclusiveness?
+    considered_attributes = ["Smiling", "Black_Hair", "Blond_Hair", "Brown_Hair", "Bald", "Male", "Mustache"]
 
     run_training(
         model_dir,
-        args.tfrecords,
+        args.train_tfrecords,
+        args.test_tfrecords,
         considered_attributes,
         **hparams)

@@ -3,6 +3,29 @@ import tensorflow as tf
 from smile.attgan.loss import wgan_gp_losses
 
 
+"""
+def preprocess(x):
+    h, w = x.shape[1:-1]
+    x = x * 2 - 1
+    x = tf.image.resize_images(x, [h - 2, w - 2])
+    return x
+
+
+def postprocess(x):
+    h, w = x.shape[1:-1]
+    x = tf.image.resize_images(x, [h + 2, w + 2])
+    x = (x + 1) / 2
+    return x
+"""
+
+
+def preprocess(x):
+    x = tf.image.crop_to_bounding_box(x, 26, 3, 170, 170)
+    x = tf.image.resize_images(x, (128, 128))
+    x = x * 2 - 1
+    return x
+
+
 class AttGAN:
     def __init__(self,
                  img,
@@ -17,24 +40,44 @@ class AttGAN:
                  **hparams):
 
         is_training = tf.placeholder_with_default(False, [])
-        x_test = None  # TODO: input pipeline with test images.
+
+        _, n_classes = attributes.get_shape()
 
         # TODO: preprocess/postprocess [-1, 1] etc
 
-        _cd_shared = tf.make_template("classifier_discriminator_shared", classifier_discriminator_shared_fn, **hparams)
-        _d_private = tf.make_template("discriminator_private", discriminator_private_fn)
-        _c_private = tf.make_template("classifier_private", classifier_private_fn)
+        _cd_shared = tf.make_template(
+            "classifier_discriminator_shared",
+            classifier_discriminator_shared_fn,
+            is_training=is_training,
+            **hparams)
+        _d_private = tf.make_template(
+            "discriminator_private",
+            discriminator_private_fn,
+            is_training=is_training,
+            **hparams)
+        _c_private = tf.make_template(
+            "classifier_private",
+            classifier_private_fn,
+            n_classes=n_classes,
+            is_training=is_training,
+            **hparams)
         cd_scope_regex = "(classifier_discriminator_shared|discriminator_private|classifier_private)"
 
         # Model parts.
-        encoder = tf.make_template("encoder", encoder_fn, **hparams)
-        decoder = tf.make_template("decoder", decoder_fn, **hparams)
+        encoder = tf.make_template("encoder", encoder_fn, is_training=is_training, **hparams)
+        decoder = tf.make_template("decoder", decoder_fn, is_training=is_training, **hparams)
         classifier = lambda x: _c_private(_cd_shared(x))
         discriminator = lambda x: _d_private(_cd_shared(x))
 
-        x = img
+        # TODO: Maybe need better way of sampling target attributes
+        # Existing ones shouldnt happen.
+        # sample num ones per row as well.
+
+        x = preprocess(img)
         z = encoder(x)  # TODO: Include attribute intensity part.
-        sampled_attributes = None  # TODO: How to sample this for training? TODO: Placeholder
+        #sampled_attributes = \
+        #    tf.cast(tf.random_uniform(shape=tf.shape(attributes), dtype=tf.int32, maxval=2), tf.float32)
+        sampled_attributes = tf.cast(tf.logical_not(tf.cast(attributes, tf.bool)), tf.float32)  # Invert attributes.
         x_translated = decoder(z, sampled_attributes)
         x_reconstructed = decoder(z, attributes)
 
@@ -72,6 +115,8 @@ class AttGAN:
             global_step.assign_add(1)
         )
 
+        # TODO: Add summary for classification accuracy of test attributes.
+
         scalar_summaries = tf.summary.merge((
             tf.summary.scalar("loss/enc_dec_loss", encoder_decoder_loss),
             tf.summary.scalar("loss/disc_cls_loss", discriminator_classifier_loss),
@@ -80,8 +125,8 @@ class AttGAN:
             tf.summary.scalar("loss/parts/enc_dec_adversarial_loss", encoder_decoder_adversarial_loss),
             tf.summary.scalar("loss/parts/disc_adversarial_loss", discriminator_adversarial_loss),
             tf.summary.scalar("loss/parts/enc_dec_reconstruction_loss", reconstruction_loss),
-            tf.summary.scalar("disc/real", discriminator(x)),
-            tf.summary.scalar("disc/fake", discriminator(x_translated)),
+            tf.summary.scalar("disc/real", tf.reduce_mean(discriminator(x))),
+            tf.summary.scalar("disc/fake", tf.reduce_mean(discriminator(x_translated))),
             tf.summary.scalar(
                 "cls/mean_accuracy_real",
                 tf.reduce_mean(tf.metrics.accuracy(attributes, tf.sigmoid(classifier(x)) > 0))),
@@ -99,6 +144,7 @@ class AttGAN:
         # TODO: For test image, visualize translations for all attributes we train for.
             # Both single and multiple.
         # TODO: Add visualizations for sliding intensity.
+        x_test = preprocess(img_test)
         image_summaries = tf.summary.merge((
             img_summary("train", x, x_translated),
             img_summary("test", x_test, decoder(encoder(x_test), sampled_attributes))

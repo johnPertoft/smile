@@ -87,7 +87,7 @@ def input_fn_with_attributes(tfrecord_paths, considered_attributes, batch_size, 
 
     ds = tf.data.TFRecordDataset(tfrecord_paths)
     ds = ds.map(parse_serialized)
-    ds = ds.filter(at_least_one_considered_attribute)
+    ds = ds.filter(at_least_one_considered_attribute)  # TODO: Should be optional?
     ds = ds.shuffle(1024)
     ds = ds.repeat(num_epochs)
     ds = ds.batch(batch_size)
