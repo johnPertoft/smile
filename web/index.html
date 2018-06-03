@@ -3,12 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@0.10.0"> </script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"> </script>
+    <!--<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"> </script>-->
 </head>
 <body>
+<img src="img/000001.jpg">
+<img src="img/000002.jpg">
+<img src="img/000003.jpg">
+<img src="img/000004.jpg">
+<img src="img/000005.jpg">
+<img src="img/000006.jpg">
+<img src="img/000007.jpg">
+<img src="img/000008.jpg">
+<img src="img/000009.jpg">
+<img src="img/000010.jpg">
 <script>
-    const modelName = "abc"
-    const model = tf.loadFrozenModel(`models/${modelName}/model.json`)
+const MODEL_URL = './models/test-model-js/tensorflowjs_model.pb'
+const WEIGHTS_URL = './models/test-model-js/weights_manifest.json'
+
+window.onload = async function main() {
+
+    const imgs = document.getElementsByTagName("img")
+
+
+    const model = await tf.loadFrozenModel(MODEL_URL, WEIGHTS_URL)
+    console.log(model)
+
+    //model.execute({input: tf.fromPixels(imgs[0])});
+}
 </script>
 </body>
 </html>

@@ -47,14 +47,21 @@ def run_training(model_dir: Path,
         tf.tables_initializer(),
         iterator_initializer))
 
+    max_training_steps = 250000
+
     with tf.train.MonitoredTrainingSession(
             scaffold=scaffold,
             checkpoint_dir=str(model_dir),
             save_summaries_secs=30) as sess:
+        while not sess.should_stop():
+            i = attgan.train_step(sess, summary_writer)
+            if i > max_training_steps:
+                break
 
-        _, attr = sess.run((img_train, attributes_train))
-        print(attr)
-        exit()
+    # Note: tf.train.MonitoredTrainingSession finalizes the graph so can't export from it.
+    with tf.Session() as sess:
+        tf.train.Saver().restore(sess, tf.train.latest_checkpoint(str(model_dir)))
+        attgan.export(sess, str(model_dir / "export"))
 
 
 if __name__ == "__main__":

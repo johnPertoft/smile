@@ -166,5 +166,7 @@ class AttGAN:
             image_summaries = sess.run(self.image_summaries)
             summary_writer.add_summary(image_summaries, i)
 
-    def export(self):
+        return i
+
+    def export(self, sess, export_dir):
         pass
