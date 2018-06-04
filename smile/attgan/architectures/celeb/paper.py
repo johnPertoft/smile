@@ -26,10 +26,14 @@ def decoder(z, attributes, is_training, **hparams):
         x = tf.nn.relu(x)
         return x
 
-    # TODO: Use attributes. Concat as feature maps?
+    h, w = z.get_shape()[1:3]
+    attributes = attributes[:, tf.newaxis, tf.newaxis, :]
+    attributes = tf.tile(attributes, (1, h, w, 1))
+
+    # TODO: Shortcut / inject layers?
 
     # Net definition.
-    net = z
+    net = tf.concat((z, attributes), axis=3)
     net = deconv_bn_relu(net, 1024, 4, 2)
     net = deconv_bn_relu(net, 512, 4, 2)
     net = deconv_bn_relu(net, 256, 4, 2)

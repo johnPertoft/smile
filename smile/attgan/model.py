@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 from smile.attgan.loss import wgan_gp_losses
-
+from smile.utils.tf_utils import img_summary
 
 """
 def preprocess(x):
@@ -38,7 +38,6 @@ class AttGAN:
                  classifier_private_fn,
                  discriminator_private_fn,
                  **hparams):
-
         is_training = tf.placeholder_with_default(False, [])
 
         _, n_classes = attributes.get_shape()
@@ -61,7 +60,6 @@ class AttGAN:
             n_classes=n_classes,
             is_training=is_training,
             **hparams)
-        cd_scope_regex = "(classifier_discriminator_shared|discriminator_private|classifier_private)"
 
         # Model parts.
         encoder = tf.make_template("encoder", encoder_fn, is_training=is_training, **hparams)
@@ -69,19 +67,20 @@ class AttGAN:
         classifier = lambda x: _c_private(_cd_shared(x))
         discriminator = lambda x: _d_private(_cd_shared(x))
 
-        # TODO: Maybe need better way of sampling target attributes
-        # Existing ones shouldnt happen.
-        # sample num ones per row as well.
+        def generate_attributes(attributes):
+            # TODO: Maybe need better way of sampling target attributes
+            # Existing ones shouldnt happen.
+            # sample num ones per row as well.
+            # sampled_attributes = \
+            #    tf.cast(tf.random_uniform(shape=tf.shape(attributes), dtype=tf.int32, maxval=2), tf.float32)
+            return  tf.cast(tf.logical_not(tf.cast(attributes, tf.bool)), tf.float32)  # Just invert the attributes.
+
 
         x = preprocess(img)
         z = encoder(x)  # TODO: Include attribute intensity part.
-        #sampled_attributes = \
-        #    tf.cast(tf.random_uniform(shape=tf.shape(attributes), dtype=tf.int32, maxval=2), tf.float32)
-        sampled_attributes = tf.cast(tf.logical_not(tf.cast(attributes, tf.bool)), tf.float32)  # Invert attributes.
+        sampled_attributes = generate_attributes(attributes)
         x_translated = decoder(z, sampled_attributes)
         x_reconstructed = decoder(z, attributes)
-
-        # Losses.
 
         classification_loss = lambda t, l: tf.reduce_mean(tf.losses.sigmoid_cross_entropy(t, l))
         encoder_decoder_classification_loss = classification_loss(sampled_attributes, classifier(x_translated))
@@ -99,9 +98,6 @@ class AttGAN:
         discriminator_classifier_loss = (hparams["lambda_cls_d"] * classifier_classification_loss +
                                          discriminator_adversarial_loss)
 
-        def get_vars(scope):
-            return tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
-
         learning_rate = 1e-4  # TODO: with decay?
 
         def create_update_step(loss, variables):
@@ -109,13 +105,17 @@ class AttGAN:
 
         global_step = tf.train.get_or_create_global_step()
 
-        optimization_step = tf.group(
-            create_update_step(encoder_decoder_loss, get_vars("(encoder|decoder)")),
-            create_update_step(discriminator_classifier_loss, get_vars(cd_scope_regex)),
-            global_step.assign_add(1)
-        )
+        disc_cls_variables = tf.get_collection(
+            tf.GraphKeys.TRAINABLE_VARIABLES,
+            scope="(classifier_discriminator_shared|discriminator_private|classifier_private)")
+        enc_dec_variables = tf.get_collection(
+            tf.GraphKeys.TRAINABLE_VARIABLES,
+            scope="(encoder|decoder)")
 
-        # TODO: Add summary for classification accuracy of test attributes.
+        optimization_step = tf.group(
+            create_update_step(encoder_decoder_loss, enc_dec_variables),
+            create_update_step(discriminator_classifier_loss, disc_cls_variables),
+            global_step.assign_add(1))
 
         scalar_summaries = tf.summary.merge((
             tf.summary.scalar("loss/enc_dec_loss", encoder_decoder_loss),
@@ -125,40 +125,38 @@ class AttGAN:
             tf.summary.scalar("loss/parts/enc_dec_adversarial_loss", encoder_decoder_adversarial_loss),
             tf.summary.scalar("loss/parts/disc_adversarial_loss", discriminator_adversarial_loss),
             tf.summary.scalar("loss/parts/enc_dec_reconstruction_loss", reconstruction_loss),
+
             tf.summary.scalar("disc/real", tf.reduce_mean(discriminator(x))),
             tf.summary.scalar("disc/fake", tf.reduce_mean(discriminator(x_translated))),
+
             tf.summary.scalar(
                 "cls/mean_accuracy_real",
                 tf.reduce_mean(tf.metrics.accuracy(attributes, tf.sigmoid(classifier(x)) > 0))),
             tf.summary.scalar(
                 "cls/mean_accuracy_fake",
                 tf.reduce_mean(tf.metrics.accuracy(sampled_attributes, tf.sigmoid(classifier(x_translated)) > 0))),
+
             tf.summary.scalar("learning_rate", learning_rate)
         ))
 
-        def img_summary(name, before, after):
-            # TODO: Need to visualize, sampled_attributes as well.
-            side_by_side = tf.concat((before, after), axis=2)[:3]
-            return tf.summary.image(name, side_by_side)
-
-        # TODO: For test image, visualize translations for all attributes we train for.
-            # Both single and multiple.
+        # TODO: For test image, visualize translations for all attributes we train for. Both single and multiple.
         # TODO: Add visualizations for sliding intensity.
+
         x_test = preprocess(img_test)
         image_summaries = tf.summary.merge((
             img_summary("train", x, x_translated),
-            img_summary("test", x_test, decoder(encoder(x_test), sampled_attributes))
+            img_summary("test", x_test, decoder(encoder(x_test), generate_attributes(attributes_test)))
         ))
 
         self.is_training = is_training
         self.global_step = global_step
-        self.train_step = optimization_step
+        self.train_op = optimization_step
         self.scalar_summaries = scalar_summaries
         self.image_summaries = image_summaries
 
     def train_step(self, sess, summary_writer):
         _, scalar_summaries, i = sess.run(
-            (self.train_step, self.scalar_summaries, self.global_step),
+            (self.train_op, self.scalar_summaries, self.global_step),
             feed_dict={self.is_training: True})
         summary_writer.add_summary(scalar_summaries, i)
 
