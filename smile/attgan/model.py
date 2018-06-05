@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from smile.attgan.loss import wgan_gp_losses
+from smile.attgan.loss import classification_loss, wgan_gp_losses
 from smile.utils.tf_utils import img_summary
 
 """
@@ -73,8 +73,7 @@ class AttGAN:
             # sample num ones per row as well.
             # sampled_attributes = \
             #    tf.cast(tf.random_uniform(shape=tf.shape(attributes), dtype=tf.int32, maxval=2), tf.float32)
-            return  tf.cast(tf.logical_not(tf.cast(attributes, tf.bool)), tf.float32)  # Just invert the attributes.
-
+            return tf.cast(tf.logical_not(tf.cast(attributes, tf.bool)), tf.float32)  # Just invert the attributes.
 
         x = preprocess(img)
         z = encoder(x)  # TODO: Include attribute intensity part.
@@ -82,7 +81,6 @@ class AttGAN:
         x_translated = decoder(z, sampled_attributes)
         x_reconstructed = decoder(z, attributes)
 
-        classification_loss = lambda t, l: tf.reduce_mean(tf.losses.sigmoid_cross_entropy(t, l))
         encoder_decoder_classification_loss = classification_loss(sampled_attributes, classifier(x_translated))
         classifier_classification_loss = classification_loss(attributes, classifier(x))
 

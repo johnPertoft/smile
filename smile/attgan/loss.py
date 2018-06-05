@@ -1,6 +1,10 @@
 import tensorflow as tf
 
 
+def classification_loss(targets, logits):
+    return tf.reduce_mean(tf.losses.sigmoid_cross_entropy(targets, logits))
+
+
 def wgan_gp_losses(x_real, x_fake, critic):
     # Interpolate between x_real and x_fake.
     shape = [tf.shape(x_real)[0]] + [1] * (x_real.shape.ndims - 1)
