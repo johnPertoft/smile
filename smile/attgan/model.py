@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 from smile.attgan.loss import classification_loss, wgan_gp_losses
-from smile.utils.tf_utils import img_summary
+from smile.utils.tf_utils import img_summary, img_summary_with_text
 
 """
 def preprocess(x):
@@ -38,6 +38,7 @@ class AttGAN:
                  classifier_private_fn,
                  discriminator_private_fn,
                  **hparams):
+
         is_training = tf.placeholder_with_default(False, [])
 
         _, n_classes = attributes.get_shape()
@@ -96,24 +97,33 @@ class AttGAN:
         discriminator_classifier_loss = (hparams["lambda_cls_d"] * classifier_classification_loss +
                                          discriminator_adversarial_loss)
 
-        learning_rate = 1e-4  # TODO: with decay?
+        # TODO: Classifier needs regularization.
+
+        global_step = tf.train.get_or_create_global_step()
+
+        initial_learning_rate = 2e-4
+        dataset_size = 180000
+        steps_per_epoch = dataset_size // hparams["batch_size"]
+        learning_rate = tf.train.exponential_decay(
+            learning_rate=initial_learning_rate,
+            global_step=global_step,
+            decay_steps=100 * steps_per_epoch,
+            decay_rate=0.1,
+            staircase=True)
 
         def create_update_step(loss, variables):
             return tf.train.AdamOptimizer(learning_rate, beta1=0.5).minimize(loss, var_list=variables)
 
-        global_step = tf.train.get_or_create_global_step()
-
         disc_cls_variables = tf.get_collection(
             tf.GraphKeys.TRAINABLE_VARIABLES,
-            scope="(classifier_discriminator_shared|discriminator_private|classifier_private)")
+            scope="(classifier|discriminator)")
         enc_dec_variables = tf.get_collection(
             tf.GraphKeys.TRAINABLE_VARIABLES,
             scope="(encoder|decoder)")
+        assert (set(disc_cls_variables) & set(enc_dec_variables)) == set(), "D and G should not share variables."
 
-        optimization_step = tf.group(
-            create_update_step(encoder_decoder_loss, enc_dec_variables),
-            create_update_step(discriminator_classifier_loss, disc_cls_variables),
-            global_step.assign_add(1))
+        enc_dec_train_step = create_update_step(encoder_decoder_loss, enc_dec_variables)
+        disc_cls_train_step = create_update_step(discriminator_classifier_loss, disc_cls_variables)
 
         scalar_summaries = tf.summary.merge((
             tf.summary.scalar("loss/enc_dec_loss", encoder_decoder_loss),
@@ -129,16 +139,21 @@ class AttGAN:
 
             tf.summary.scalar(
                 "cls/mean_accuracy_real",
-                tf.reduce_mean(tf.metrics.accuracy(attributes, tf.sigmoid(classifier(x)) > 0))),
+                tf.reduce_mean(tf.metrics.accuracy(attributes, tf.sigmoid(classifier(x)) > 0.5))),
             tf.summary.scalar(
                 "cls/mean_accuracy_fake",
-                tf.reduce_mean(tf.metrics.accuracy(sampled_attributes, tf.sigmoid(classifier(x_translated)) > 0))),
+                tf.reduce_mean(tf.metrics.accuracy(sampled_attributes, tf.sigmoid(classifier(x_translated)) > 0.5))),
 
             tf.summary.scalar("learning_rate", learning_rate)
         ))
 
         # TODO: For test image, visualize translations for all attributes we train for. Both single and multiple.
         # TODO: Add visualizations for sliding intensity.
+
+        # TODO: do lookup of attribute names here and pass tf.string tensor instead.
+        attribute_names = ["Smiling", "Bald", "Male", "Mustache", "Young", "Eyeglasses"]
+        img_summary_with_text("train", x, attributes, x_translated, sampled_attributes, attribute_names)
+        exit()
 
         x_test = preprocess(img_test)
         image_summaries = tf.summary.merge((
@@ -148,15 +163,26 @@ class AttGAN:
 
         self.is_training = is_training
         self.global_step = global_step
-        self.train_op = optimization_step
+        self.global_step_increment = global_step.assign_add(1)
+        self.enc_dec_train_step = enc_dec_train_step
+        self.disc_cls_train_step = disc_cls_train_step
         self.scalar_summaries = scalar_summaries
         self.image_summaries = image_summaries
 
     def train_step(self, sess, summary_writer):
+
+        for _ in range(5):
+            sess.run(self.disc_cls_train_step, feed_dict={self.is_training: True})
+
         _, scalar_summaries, i = sess.run(
-            (self.train_op, self.scalar_summaries, self.global_step),
+            (self.enc_dec_train_step, self.scalar_summaries, self.global_step_increment),
             feed_dict={self.is_training: True})
+
         summary_writer.add_summary(scalar_summaries, i)
+
+        if i > 0 and i % 1000 == 0:
+            sess.run()
+            pass
 
         if i > 0 and i % 1000 == 0:
             image_summaries = sess.run(self.image_summaries)

@@ -86,7 +86,7 @@ if __name__ == "__main__":
         model_dir = Path(args.model_dir)
 
     # TODO: Param for this. Handle mutual exclusiveness?
-    considered_attributes = ["Smiling", "Black_Hair", "Blond_Hair", "Brown_Hair", "Bald", "Male", "Mustache"]
+    considered_attributes = ["Smiling", "Bald", "Male", "Mustache", "Young", "Eyeglasses"]
 
     run_training(
         model_dir,
