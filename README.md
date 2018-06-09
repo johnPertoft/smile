@@ -41,7 +41,7 @@ Some cherrypicks.
 * Densenet architecture(s)
 * Spectral normalization
 * Progressive growing
-* Attention mechanism
+* Attention mechanism, see self-attention GAN
 * Facial landmarks as supervision
 
 ### Other models
@@ -53,3 +53,4 @@ Some cherrypicks.
 * XGAN
 * DA-gan model
 * AttGAN
+* https://github.com/yingcong/Facelet_Bank

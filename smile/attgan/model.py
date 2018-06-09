@@ -3,21 +3,6 @@ import tensorflow as tf
 from smile.attgan.loss import classification_loss, wgan_gp_losses
 from smile.utils.tf_utils import img_summary, img_summary_with_text
 
-"""
-def preprocess(x):
-    h, w = x.shape[1:-1]
-    x = x * 2 - 1
-    x = tf.image.resize_images(x, [h - 2, w - 2])
-    return x
-
-
-def postprocess(x):
-    h, w = x.shape[1:-1]
-    x = tf.image.resize_images(x, [h + 2, w + 2])
-    x = (x + 1) / 2
-    return x
-"""
-
 
 def preprocess(x):
     x = tf.image.crop_to_bounding_box(x, 26, 3, 170, 170)
@@ -26,8 +11,13 @@ def preprocess(x):
     return x
 
 
+def postprocess(x):
+    return (x + 1) / 2
+
+
 class AttGAN:
     def __init__(self,
+                 attribute_names,
                  img,
                  attributes,
                  img_test,
@@ -147,18 +137,20 @@ class AttGAN:
             tf.summary.scalar("learning_rate", learning_rate)
         ))
 
-        # TODO: For test image, visualize translations for all attributes we train for. Both single and multiple.
         # TODO: Add visualizations for sliding intensity.
 
-        # TODO: do lookup of attribute names here and pass tf.string tensor instead.
-        attribute_names = ["Smiling", "Bald", "Male", "Mustache", "Young", "Eyeglasses"]
-        img_summary_with_text("train", x, attributes, x_translated, sampled_attributes, attribute_names)
-        exit()
-
         x_test = preprocess(img_test)
+        sampled_attributes_test = generate_attributes(attributes_test)
+        x_test_translated = decoder(encoder(x_test), sampled_attributes)
+
         image_summaries = tf.summary.merge((
-            img_summary("train", x, x_translated),
-            img_summary("test", x_test, decoder(encoder(x_test), generate_attributes(attributes_test)))
+            img_summary_with_text("train", attribute_names,
+                                  postprocess(x), attributes,
+                                  postprocess(x_translated), sampled_attributes),
+
+            img_summary_with_text("test", attribute_names,
+                                  postprocess(x_test), attributes_test,
+                                  postprocess(x_test_translated), sampled_attributes_test)
         ))
 
         self.is_training = is_training
@@ -170,7 +162,6 @@ class AttGAN:
         self.image_summaries = image_summaries
 
     def train_step(self, sess, summary_writer):
-
         for _ in range(5):
             sess.run(self.disc_cls_train_step, feed_dict={self.is_training: True})
 
@@ -179,10 +170,6 @@ class AttGAN:
             feed_dict={self.is_training: True})
 
         summary_writer.add_summary(scalar_summaries, i)
-
-        if i > 0 and i % 1000 == 0:
-            sess.run()
-            pass
 
         if i > 0 and i % 1000 == 0:
             image_summaries = sess.run(self.image_summaries)

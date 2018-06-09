@@ -1,3 +1,5 @@
+import functools
+
 import numpy as np
 import tensorflow as tf
 from PIL import Image
@@ -11,36 +13,33 @@ def img_summary(name, before, after):
     return tf.summary.image(name, side_by_side, max_outputs=3)
 
 
-# TODO: get numpy image, return with text attached somehow
-# TODO: tf.py_func
+def img_summary_with_text(name, attribute_names,
+                          left_imgs, left_attributes_indicator,
+                          right_imgs, right_attributes_indicator):
 
-def _put_text(img, text, pos):
-    # fix number range to [0, 1] first
-    img = Image.fromarray(np.uint8(img * 255))
-    draw = ImageDraw.Draw(img)
-    draw.text(pos, text, (255, 255, 255))
-    return np.array(img)
+    text_row_vertical_space = 20
+    extra_vertical_space = text_row_vertical_space * len(attribute_names)
+    h = int(left_imgs.shape[1])
 
+    def put_text(imgs, attrs):
+        imgs_with_text = []
+        for img, attr in zip(imgs, attrs):
+            active_attributes = [an for an, a in zip(attribute_names, attr) if a == 1]
+            img = Image.fromarray(np.uint8(img * 255))
+            draw = ImageDraw.Draw(img)
+            draw.text((0, h), "\n".join(active_attributes), (0, 0, 0))
+            imgs_with_text.append(np.array(img) / 255.0)
+        return np.stack(imgs_with_text).astype(np.float32)
 
-def img_summary_with_text(name, left_imgs, left_text, right_imgs, right_text):
+    def add_attributes_text(x, attr):
+        x = tf.pad(x, [[0, 0], [0, extra_vertical_space], [0, 0], [0, 0]], constant_values=1.0)
+        x = x[:3]
+        x = tf.py_func(put_text, [x, attr], tf.float32)
+        return x
 
-    # Create space for the full image
+    left_imgs = add_attributes_text(left_imgs, left_attributes_indicator)
+    right_imgs = add_attributes_text(right_imgs, right_attributes_indicator)
 
     side_by_side = tf.concat((left_imgs, right_imgs), axis=2)
 
-    # Determine how much space is needed for text.
-
-    # Pad to make space for text
-
-    # One line per attribute?
-
-    extra_vertical_space = 100
-
-    img = tf.pad(side_by_side, [[0, 0], [0, extra_vertical_space], [0, 0], [0, 0]], constant_values=1.0)
-
-    # Wrap the function to add the text as a tf.py_func
-    # tf.map_fn(tf.py_func(_put_text
-
-    img = tf.py_func(_put_text, )
-
-    return tf.summary.image(name, img, max_outputs=3)
+    return tf.summary.image(name, side_by_side)

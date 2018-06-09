@@ -31,6 +31,7 @@ def run_training(model_dir: Path,
     iterator_initializer = tf.group(train_iterator.initializer, test_iterator.initializer)
 
     attgan = AttGAN(
+        considered_attributes,
         img_train, attributes_train,
         img_test, attributes_test,
         celeb.paper.encoder,
