@@ -6,11 +6,9 @@ from PIL import Image
 from PIL import ImageDraw
 
 
-def img_summary(name, before, after):
-    # TODO: Optional text on image somewhere.
-
-    side_by_side = tf.concat((before, after), axis=2)
-    return tf.summary.image(name, side_by_side, max_outputs=3)
+def img_summary(name, left, right):
+    side_by_side = tf.concat((left, right), axis=2)
+    return tf.summary.image(name, side_by_side)
 
 
 def img_summary_with_text(name, attribute_names,
@@ -40,6 +38,4 @@ def img_summary_with_text(name, attribute_names,
     left_imgs = add_attributes_text(left_imgs, left_attributes_indicator)
     right_imgs = add_attributes_text(right_imgs, right_attributes_indicator)
 
-    side_by_side = tf.concat((left_imgs, right_imgs), axis=2)
-
-    return tf.summary.image(name, side_by_side)
+    return img_summary(name, left_imgs, right_imgs)
