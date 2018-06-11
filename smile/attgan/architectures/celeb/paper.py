@@ -31,17 +31,17 @@ def encoder(img, is_training, **hparams):
     conv_bn_lrelu = partial(conv, normalizer_fn=bn, activation_fn=lrelu)
 
     # Net definition.
-    net = img
-    net = conv_bn_lrelu(net, 64, 4, 2)
-    net = conv_bn_lrelu(net, 128, 4, 2)
-    net = conv_bn_lrelu(net, 256, 4, 2)
-    net = conv_bn_lrelu(net, 512, 4, 2)
-    net = conv_bn_lrelu(net, 1024, 4, 2)
+    z0 = img
+    z1 = conv_bn_lrelu(z0, 64, 4, 2)
+    z2 = conv_bn_lrelu(z1, 128, 4, 2)
+    z3 = conv_bn_lrelu(z2, 256, 4, 2)
+    z4 = conv_bn_lrelu(z3, 512, 4, 2)
+    z5 = conv_bn_lrelu(z4, 1024, 4, 2)
 
-    return net
+    return [z1, z2, z3, z4, z5]
 
 
-def decoder(z, attributes, is_training, **hparams):
+def decoder(zs, attributes, is_training, **hparams):
     #def deconv_bn_relu(x, d, k, s):
     #    x = tf.layers.conv2d_transpose(x, filters=d, kernel_size=k, strides=s, use_bias=False, padding="same")
     #    x = tf.layers.batch_normalization(x, training=is_training)
@@ -51,16 +51,21 @@ def decoder(z, attributes, is_training, **hparams):
     bn = partial(batch_norm, is_training=is_training)
     deconv_bn_relu = partial(dconv, normalizer_fn=bn, activation_fn=relu)
 
+    z = zs[-1]
     h, w = z.get_shape()[1:3]
     attributes = attributes[:, tf.newaxis, tf.newaxis, :]
     attributes = tf.tile(attributes, (1, h, w, 1))
 
-    # TODO: Shortcut / inject layers?
+    # TODO: Inject layers?
+    # TODO: Shortcut layers? Maybe put this in another file as it wasnt actually mentioned in paper.
 
+    # TODO: Definable by hparams.
     # Net definition.
     net = tf.concat((z, attributes), axis=3)
     net = deconv_bn_relu(net, 1024, 4, 2)
+    net = tf.concat((net, zs[-2]), axis=3)
     net = deconv_bn_relu(net, 512, 4, 2)
+    net = tf.concat((net, zs[-3]), axis=3)
     net = deconv_bn_relu(net, 256, 4, 2)
     net = deconv_bn_relu(net, 128, 4, 2)
     net = tf.layers.conv2d_transpose(net, filters=3, kernel_size=4, strides=2, padding="same")
