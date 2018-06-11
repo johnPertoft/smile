@@ -18,10 +18,8 @@ def postprocess(x):
 class AttGAN:
     def __init__(self,
                  attribute_names,
-                 img,
-                 attributes,
-                 img_test,
-                 attributes_test,
+                 img, attributes,
+                 img_test, attributes_test,
                  encoder_fn,
                  decoder_fn,
                  classifier_discriminator_shared_fn,
@@ -32,8 +30,6 @@ class AttGAN:
         is_training = tf.placeholder_with_default(False, [])
 
         _, n_classes = attributes.get_shape()
-
-        # TODO: preprocess/postprocess [-1, 1] etc
 
         _cd_shared = tf.make_template(
             "classifier_discriminator_shared",
@@ -60,11 +56,18 @@ class AttGAN:
 
         def generate_attributes(attributes):
             # TODO: Maybe need better way of sampling target attributes
-            # Existing ones shouldnt happen.
-            # sample num ones per row as well.
-            # sampled_attributes = \
-            #    tf.cast(tf.random_uniform(shape=tf.shape(attributes), dtype=tf.int32, maxval=2), tf.float32)
-            return tf.cast(tf.logical_not(tf.cast(attributes, tf.bool)), tf.float32)  # Just invert the attributes.
+            # Existing ones shouldn't be part of target attributes?
+            # Maybe sample number of active attributes per instance as well?
+            # Or just randomly shuffle attributes
+
+            # 50/50 sample per attribute.
+            sampled_attributes = \
+                tf.cast(tf.random_uniform(shape=tf.shape(attributes), dtype=tf.int32, maxval=2), tf.float32)
+
+            # Just invert every attribute.
+            #sampled_attributes = tf.cast(tf.logical_not(tf.cast(attributes, tf.bool)), tf.float32)
+
+            return sampled_attributes
 
         x = preprocess(img)
         z = encoder(x)  # TODO: Include attribute intensity part.
@@ -88,6 +91,7 @@ class AttGAN:
                                          discriminator_adversarial_loss)
 
         # TODO: Classifier needs regularization.
+        # Or early stopping (stop updating this after a while)
 
         global_step = tf.train.get_or_create_global_step()
 
@@ -141,8 +145,7 @@ class AttGAN:
 
         x_test = preprocess(img_test)
         sampled_attributes_test = generate_attributes(attributes_test)
-        x_test_translated = decoder(encoder(x_test), sampled_attributes)
-
+        x_test_translated = decoder(encoder(x_test), sampled_attributes_test)
         image_summaries = tf.summary.merge((
             img_summary_with_text("train", attribute_names,
                                   postprocess(x), attributes,
