@@ -55,7 +55,7 @@ def run_training(model_dir: Path,
             checkpoint_dir=str(model_dir),
             save_summaries_secs=30) as sess:
         while not sess.should_stop():
-            i = attgan.train_step(sess, summary_writer)
+            i = attgan.train_step(sess, summary_writer, **hparams)
             if i > max_training_steps:
                 break
 

@@ -170,8 +170,9 @@ class AttGAN:
         self.scalar_summaries = scalar_summaries
         self.image_summaries = image_summaries
 
-    def train_step(self, sess, summary_writer):
-        for _ in range(5):
+    def train_step(self, sess, summary_writer, **hparams):
+        n_discriminator_iters = 5 if hparams["adversarial_loss_type"] == "wgan-gp" else 1
+        for _ in range(n_discriminator_iters):
             sess.run(self.disc_cls_train_step, feed_dict={self.is_training: True})
 
         _, scalar_summaries, i = sess.run(
