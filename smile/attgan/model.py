@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from smile.attgan.loss import classification_loss, wgan_gp_losses
+from smile.attgan.loss import classification_loss, lsgan_losses, wgan_gp_losses
 from smile.utils.tf_utils import img_summary, img_summary_with_text
 
 
@@ -80,8 +80,14 @@ class AttGAN:
 
         reconstruction_loss = tf.reduce_mean(tf.abs(x - x_reconstructed))
 
-        discriminator_adversarial_loss, encoder_decoder_adversarial_loss = \
-            wgan_gp_losses(x, x_translated, discriminator)
+        if hparams["adversarial_loss_type"] == "wgan-gp":
+            discriminator_adversarial_loss, encoder_decoder_adversarial_loss = \
+                wgan_gp_losses(x, x_translated, discriminator)
+        elif hparams["adversarial_loss_type"] == "lsgan":
+            discriminator_adversarial_loss, encoder_decoder_adversarial_loss = \
+                lsgan_losses(x, x_translated, discriminator)
+        else:
+            raise ValueError("Invalid adversarial loss type.")
 
         encoder_decoder_loss = (hparams["lambda_rec"] * reconstruction_loss +
                                 hparams["lambda_cls_g"] * encoder_decoder_classification_loss +
@@ -145,7 +151,7 @@ class AttGAN:
 
         x_test = preprocess(img_test)
         sampled_attributes_test = generate_attributes(attributes_test)
-        x_test_translated = decoder(encoder(x_test), sampled_attributes_test)
+        x_test_translated = decoder(encoder(x_test, is_training=False), sampled_attributes_test, is_training=False)
         image_summaries = tf.summary.merge((
             img_summary_with_text("train", attribute_names,
                                   postprocess(x), attributes,

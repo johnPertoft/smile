@@ -77,6 +77,8 @@ if __name__ == "__main__":
                           help="Weight of attribute classification discriminator loss. Relative to GAN loss part.")
     arg_parser.add_hparam("--lambda_cls_g", default=10.0, type=float,
                           help="Weight of attribute classification generator loss. Relative to GAN loss part.")
+    arg_parser.add_hparam("--adversarial_loss_type", default="wgan-gp", type=str,
+                          help="Adversarial loss function to use.")
 
     args, hparams = arg_parser.parse_args()
 
