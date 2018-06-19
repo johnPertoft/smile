@@ -51,21 +51,24 @@ def decoder(zs, attributes, is_training, **hparams):
     bn = partial(batch_norm, is_training=is_training)
     deconv_bn_relu = partial(dconv, normalizer_fn=bn, activation_fn=relu)
 
-    z = zs[-1]
-    h, w = z.get_shape()[1:3]
     attributes = attributes[:, tf.newaxis, tf.newaxis, :]
-    attributes = tf.tile(attributes, (1, h, w, 1))
+
+    def tile_attributes_like(z):
+        h, w = z.get_shape()[1:3]
+        return tf.tile(attributes, (1, h, w, 1))
 
     # TODO: Inject layers?
     # TODO: Shortcut layers? Maybe put this in another file as it wasnt actually mentioned in paper.
 
     # TODO: Definable by hparams.
     # Net definition.
-    net = tf.concat((z, attributes), axis=3)
+    z = zs[-1]
+    net = tf.concat((z, tile_attributes_like(z)), axis=3)
     net = deconv_bn_relu(net, 1024, 4, 2)
     net = tf.concat((net, zs[-2]), axis=3)
+    net = tf.concat((net, tile_attributes_like(zs[-2])), axis=3)
     net = deconv_bn_relu(net, 512, 4, 2)
-    net = tf.concat((net, zs[-3]), axis=3)
+    #net = tf.concat((net, zs[-3]), axis=3)
     net = deconv_bn_relu(net, 256, 4, 2)
     net = deconv_bn_relu(net, 128, 4, 2)
     net = tf.layers.conv2d_transpose(net, filters=3, kernel_size=4, strides=2, padding="same")
