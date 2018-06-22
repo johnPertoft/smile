@@ -3,20 +3,6 @@ from functools import partial
 import tensorflow as tf
 
 
-"""
-# TODO: See what differs in slim vs layers by replacing parts of graph creation.
-from functools import partial
-import tensorflow.contrib.slim as slim
-conv = partial(slim.conv2d, activation_fn=None)
-dconv = partial(slim.conv2d_transpose, activation_fn=None)
-fc = None
-relu = tf.nn.relu
-lrelu = tf.nn.leaky_relu
-batch_norm = partial(slim.batch_norm, scale=True, updates_collections=None)
-instance_norm = slim.instance_norm
-"""
-
-
 def encoder(img, is_training, **hparams):
 
     def reflect_pad(x, p):
