@@ -1,10 +1,11 @@
 import tensorflow as tf
 
 from smile.attgan.loss import classification_loss, lsgan_losses, wgan_gp_losses
-from smile.utils.tf_utils import img_summary, img_summary_with_text
+from smile.utils.tf_utils import img_summary_with_text
 
 
 def preprocess(x):
+    # TODO: Add crop and resize to data pipeline instead.
     x = tf.image.crop_to_bounding_box(x, 26, 3, 170, 170)
     x = tf.image.resize_images(x, (128, 128))
     x = x * 2 - 1

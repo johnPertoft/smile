@@ -30,15 +30,18 @@ def run_training(model_dir: Path,
 
     iterator_initializer = tf.group(train_iterator.initializer, test_iterator.initializer)
 
+    #model_architecture = celeb.paper
+    model_architecture = celeb.resnet
+
     attgan = AttGAN(
         considered_attributes,
         img_train, attributes_train,
         img_test, attributes_test,
-        celeb.paper.encoder,
-        celeb.paper.decoder,
-        celeb.paper.classifier_discriminator_shared,
-        celeb.paper.classifier_private,
-        celeb.paper.discriminator_private,
+        model_architecture.encoder,
+        model_architecture.decoder,
+        model_architecture.classifier_discriminator_shared,
+        model_architecture.classifier_private,
+        model_architecture.discriminator_private,
         **hparams)
 
     summary_writer = tf.summary.FileWriter(str(model_dir))
@@ -48,10 +51,14 @@ def run_training(model_dir: Path,
         tf.tables_initializer(),
         iterator_initializer))
 
-    max_training_steps = 250000
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+
+    max_training_steps = 150000
 
     with tf.train.MonitoredTrainingSession(
             scaffold=scaffold,
+            config=config,
             checkpoint_dir=str(model_dir),
             save_summaries_secs=30) as sess:
         while not sess.should_stop():
@@ -89,7 +96,7 @@ if __name__ == "__main__":
         model_dir = Path(args.model_dir)
 
     # TODO: Param for this. Handle mutual exclusiveness?
-    considered_attributes = ["Smiling", "Bald", "Male", "Mustache", "Young", "Eyeglasses"]
+    considered_attributes = ["Smiling", "Male", "Mustache", "5_o_Clock_Shadow", "Blond_Hair"]
 
     run_training(
         model_dir,
