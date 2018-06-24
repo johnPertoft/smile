@@ -7,7 +7,7 @@ import skimage.io
 import tensorflow as tf
 from tqdm import tqdm
 
-from smile.utils.data.celeb_download_contrib import download_celeb_a
+from .contrib.celeb_a_download import download_celeb_a
 
 
 def _maybe_download(root_dir: Path) -> Path:
