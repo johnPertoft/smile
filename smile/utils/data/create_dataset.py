@@ -7,10 +7,11 @@ import skimage.io
 import tensorflow as tf
 from tqdm import tqdm
 
+from .celeb_a_hq_deltas_download import download_celeb_a_hq_delta_files
 from .contrib.celeb_a_download import download_celeb_a
 
 
-def _maybe_download(root_dir: Path) -> Path:
+def _maybe_download(root_dir: Path, hq: bool=False) -> Path:
     root_dir.mkdir(parents=True, exist_ok=True)
     raw_celeb_dir = root_dir / "raw"
 
@@ -18,7 +19,17 @@ def _maybe_download(root_dir: Path) -> Path:
         tf.logging.info("Downloading celeb-a dataset.")
         download_celeb_a(str(raw_celeb_dir))
 
+    if hq:
+        _maybe_download_celeb_hq_delta_files(raw_celeb_dir / "celeb_hq_delta_files")
+
     return raw_celeb_dir
+
+
+def _maybe_download_celeb_hq_delta_files(celeb_hq_delta_files_dir: Path) -> Path:
+    if not celeb_hq_delta_files_dir.exists():
+        tf.logging.info("Downloading celeb-a hq delta files.")
+        download_celeb_a_hq_delta_files(celeb_hq_delta_files_dir)
+        exit()
 
 
 @contextlib.contextmanager
@@ -163,7 +174,10 @@ if __name__ == "__main__":
     mutex_group.add_argument("--include-attributes", action="store_true",
                              help="Whether to include attributes in tfrecords.")
     mutex_group.add_argument("--split-attribute", help="Celeb-a attribute to split on.")
+    argparser.add_argument("--hq", action="store_true", help="Whether to create the HQ variant of the dataset.")
     args = argparser.parse_args()
+
+    # TODO: Use the hq dataset variant as well.
 
     if args.include_attributes:
         prepare_celeb_with_attributes(args.dataset_dir)

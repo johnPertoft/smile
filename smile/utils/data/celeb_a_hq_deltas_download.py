@@ -1,6 +1,8 @@
-
+import zipfile
+from pathlib import Path
 
 from .contrib.celeb_a_download import download_file_from_google_drive
+from .contrib.celeb_a_download import unzip
 
 
 _CELEB_A_HQ_DELTA_FILES = [
@@ -37,6 +39,10 @@ _CELEB_A_HQ_DELTA_FILES = [
 ]
 
 
-for fname, id in _CELEB_A_HQ_DELTA_FILES[:1]:
-    download_file_from_google_drive(id, fname)
-    # TODO: Unzip them somewhere
+def download_celeb_a_hq_delta_files(output_dir: Path):
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for fname, id in _CELEB_A_HQ_DELTA_FILES:
+        fpath = str(output_dir / fname)
+        download_file_from_google_drive(id, fpath)
+        unzip(fpath)
