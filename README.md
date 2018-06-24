@@ -1,4 +1,7 @@
 # Smile
+This repository contains Tensorflow implementations of some models dealing with image translation. Here they are 
+applied to the problem of facial attribute editing (e.g. smile to non-smile and vice versa). Some models can only
+handle one attribute at a time and some can handle multiple.
 
 ## Download and Prepare Dataset
 For dataset split on a given feature. (Expected by CycleGAN, etc).
@@ -11,7 +14,9 @@ For dataset with attributes included in Tfrecords. (Expected by AttGAN, etc).
 $ python -m smile.utils.data.create_dataset --dataset-dir datasets/celeb --include-attributes
 ```
 
-## Run training
+## Results
+
+### CycleGAN
 ```bash
 $ python -m smile.cyclegan.train \
     --X-train datasets/celeb/tfrecords/smiling/train/* \
@@ -25,18 +30,23 @@ For more options:
 $ python -m smile.cyclegan.train --help
 ```
 
-## Results
+
 Some cherrypicks.
 
 ![alt text](pics/cherrypick1.png)
 
 ![alt text](pics/cherrypick2.png)
 
-## TODO
+### AttGAN
+TODO: Add command to recreate.
 
-* Consider resizing to 128x128 as most papers do.
+![alt text](pics/attgan.png)
+
+## TODO
+* Better results images per model.
 
 ### CycleGAN
+Revisit some of these
 * WGAN-GP loss
 * Densenet architecture(s)
 * Spectral normalization
