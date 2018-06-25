@@ -30,7 +30,6 @@ For more options:
 $ python -m smile.cyclegan.train --help
 ```
 
-
 Some cherrypicks.
 
 ![alt text](pics/cherrypick1.png)
@@ -41,6 +40,12 @@ Some cherrypicks.
 TODO: Add command to recreate.
 
 ![alt text](pics/attgan.png)
+
+### StarGAN
+TODO: Show results.
+
+### UNIT
+TODO: Show results.
 
 ## TODO
 * Better results images per model.
