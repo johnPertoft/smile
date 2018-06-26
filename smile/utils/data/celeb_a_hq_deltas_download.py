@@ -35,7 +35,8 @@ _CELEB_A_HQ_DELTA_FILES = [
     ("deltas26000.zip", "0B4qLcYyJmiz0U0tBanQ4cHNBUWc"),
     ("deltas27000.zip", "0B4qLcYyJmiz0U1BRYl9tSWFWVGM"),
     ("deltas28000.zip", "0B4qLcYyJmiz0U1BhWlFGRXc1aHc"),
-    ("deltas29000.zip", "0B4qLcYyJmiz0U1pnMEI4WXN1S3M")
+    ("deltas29000.zip", "0B4qLcYyJmiz0U1pnMEI4WXN1S3M"),
+    ("image_list.txt", "0B4qLcYyJmiz0U25vdEVIU3NvNFk")
 ]
 
 
