@@ -1,7 +1,7 @@
 import argparse
 import contextlib
 from pathlib import Path
-from typing import Any, Iterator, List, Sequence
+from typing import Iterator, List, Sequence, Tuple
 
 import skimage.io
 import tensorflow as tf
@@ -20,16 +20,12 @@ def _maybe_download(root_dir: Path, hq: bool=False) -> Path:
         download_celeb_a(str(raw_celeb_dir))
 
     if hq:
-        _maybe_download_celeb_hq_delta_files(raw_celeb_dir / "celeb_hq_delta_files")
+        celeb_hq_delta_files_dir = raw_celeb_dir / "celeb_hq_delta_files"
+        if not celeb_hq_delta_files_dir.exists():
+            tf.logging.info("Downloading celeb-a hq delta files.")
+            download_celeb_a_hq_delta_files(celeb_hq_delta_files_dir)
 
     return raw_celeb_dir
-
-
-def _maybe_download_celeb_hq_delta_files(celeb_hq_delta_files_dir: Path) -> Path:
-    if not celeb_hq_delta_files_dir.exists():
-        tf.logging.info("Downloading celeb-a hq delta files.")
-        download_celeb_a_hq_delta_files(celeb_hq_delta_files_dir)
-        exit()
 
 
 @contextlib.contextmanager
@@ -42,7 +38,7 @@ def _attributes_csv_iterator(root_dir: Path):
         yield attribute_columns, attributes_csv
 
 
-def _train_test_split(data_rows: List[Any]):
+def _train_test_split(data_rows: List) -> Tuple[List, List]:
     # Note: This value is from list_eval_celeb.txt and here
     # we include both train and eval set as the train set.
     split_index = 182638
@@ -55,7 +51,7 @@ def _write_examples(examples: Sequence[tf.train.Example], shard_path: Path):
             record_writer.write(example.SerializeToString())
 
 
-def _write_shards(shards_dir: Path, examples: Iterator[tf.train.Example], n_examples):
+def _write_shards(shards_dir: Path, examples: Iterator[tf.train.Example], n_examples: int):
     shards_dir.mkdir(parents=True, exist_ok=True)
     examples_per_shard = 1000
     example_buffer = []
