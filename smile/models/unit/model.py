@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from smile.unit.loss import vae_loss, gan_losses, cyclic_loss
+from smile.models.unit import vae_loss, gan_losses, cyclic_loss
 
 
 def preprocess(x):

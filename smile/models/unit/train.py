@@ -4,9 +4,9 @@ from typing import List
 import tensorflow as tf
 
 from smile import utils
-from smile.unit.architectures.celeb import paper
-from smile.unit.input import celeb_input_fn
-from smile.unit.model import UNIT
+from smile.models.unit.architectures.celeb import paper
+from smile.models.unit.input import celeb_input_fn
+from smile.models.unit.model import UNIT
 
 
 def run_training(model_dir: Path,

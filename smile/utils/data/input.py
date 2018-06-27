@@ -95,3 +95,22 @@ def input_fn_with_attributes(tfrecord_paths, considered_attributes, batch_size, 
     # TODO: Can we avoid requiring an initializable iterator?
 
     return ds
+
+
+def input_fn_progressive_growing(tfrecords_paths, batch_size, num_epochs=None):
+    # TODO: with and without attributes included.
+
+    # maybe return the images at all scale levels instead
+    # like: (4x4, 8x8, 16x16, ..., 1024x1024, (attributes))
+    # then we can probably reuse the existing functions.
+
+    pass
+
+
+def _multiple_resolutions(img, *args):
+
+    # img is the highest resolution
+    # this should return img in falling resolution and the other *args
+    # TODO: lookup what method they use for downscaling in paper.
+    # https://hackernoon.com/how-tensorflows-tf-image-resize-stole-60-days-of-my-life-aba5eb093f35
+    pass

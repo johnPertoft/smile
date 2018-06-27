@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from smile.stargan.loss import lsgan_losses, attribute_classification_losses
+from smile.models.stargan.loss import lsgan_losses, attribute_classification_losses
 
 
 def preprocess(x):

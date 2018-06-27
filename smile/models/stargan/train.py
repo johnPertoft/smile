@@ -5,9 +5,9 @@ from typing import Any, Dict, List
 
 import tensorflow as tf
 
-from smile.stargan import StarGAN
-from smile.stargan.architectures import celeb
-from smile.stargan.data import celeb_input_iterator
+from smile.models.stargan import StarGAN
+from smile.models.stargan.architectures import celeb
+from smile.models.stargan.data import celeb_input_iterator
 
 
 tf.logging.set_verbosity(tf.logging.INFO)
