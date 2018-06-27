@@ -3,9 +3,9 @@ from typing import List
 
 import tensorflow as tf
 
-from smile.cyclegan import CycleGAN
-from smile.cyclegan.architectures import celeb
-from smile.cyclegan.input import celeb_input_fn
+from smile.models.cyclegan import CycleGAN
+from smile.models.cyclegan.architectures import celeb
+from smile.models.cyclegan import celeb_input_fn
 from smile import utils
 
 

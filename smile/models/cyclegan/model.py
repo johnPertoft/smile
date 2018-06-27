@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from smile.cyclegan.loss import lsgan_losses
+from smile.models.cyclegan import lsgan_losses
 
 
 def preprocess(x):

@@ -3,8 +3,7 @@ from typing import List
 
 import tensorflow as tf
 
-from smile.attgan import AttGAN
-from smile.attgan.architectures import celeb
+from smile.models.attgan import AttGAN
 from smile.utils.data.input import input_fn_with_attributes
 from smile import utils
 
@@ -31,7 +30,7 @@ def run_training(model_dir: Path,
     iterator_initializer = tf.group(train_iterator.initializer, test_iterator.initializer)
 
     #model_architecture = celeb.paper
-    model_architecture = celeb.resnet
+    model_architecture = smile.models.attgan.architectures.celeb.resnet
 
     attgan = AttGAN(
         considered_attributes,

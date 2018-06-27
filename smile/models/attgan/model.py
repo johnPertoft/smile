@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from smile.attgan.loss import classification_loss, lsgan_losses, wgan_gp_losses
+from smile.models.attgan.loss import classification_loss, lsgan_losses, wgan_gp_losses
 from smile.utils.tf_utils import img_summary_with_text
 
 
