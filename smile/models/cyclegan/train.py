@@ -3,10 +3,10 @@ from typing import List
 
 import tensorflow as tf
 
+from smile import utils
+from smile.data.celeb import img_dataset
 from smile.models.cyclegan import CycleGAN
 from smile.models.cyclegan.architectures import celeb
-from smile.models.cyclegan import celeb_input_fn
-from smile import utils
 
 
 tf.logging.set_verbosity(tf.logging.INFO)
@@ -21,11 +21,19 @@ def run_training(model_dir: Path,
 
     model_dir.mkdir(parents=True, exist_ok=True)
 
+    # TODO: Add data augmentation back.
+    def input_fn(paths, batch_size):
+        ds = img_dataset(paths, batch_size)
+        img = ds.make_one_shot_iterator().get_next()
+        return img
+
+    # TODO: adapt to 128x128?
+
     cycle_gan = CycleGAN(
-        celeb_input_fn(X_train_paths, batch_size=hparams["batch_size"], data_augmentation=True),
-        celeb_input_fn(X_test_paths, batch_size=4),
-        celeb_input_fn(Y_train_paths, batch_size=hparams["batch_size"], data_augmentation=True),
-        celeb_input_fn(Y_test_paths, batch_size=4),
+        input_fn(X_train_paths, batch_size=hparams["batch_size"]),
+        input_fn(X_test_paths, batch_size=4),
+        input_fn(Y_train_paths, batch_size=hparams["batch_size"]),
+        input_fn(Y_test_paths, batch_size=4),
         celeb.GENERATORS[hparams["generator_architecture"]],
         celeb.DISCRIMINATORS[hparams["discriminator_architecture"]],
         **hparams)
