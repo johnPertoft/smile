@@ -1,14 +1,14 @@
 import argparse
 import contextlib
 from pathlib import Path
-from typing import Iterator, List, Sequence, Tuple
 
 import skimage.io
 import tensorflow as tf
 from tqdm import tqdm
+from typing import Iterator, List, Sequence, Tuple
 
-from .celeb_a_hq_deltas_download import download_celeb_a_hq_delta_files
-from .contrib.celeb_a_download import download_celeb_a
+from smile.data.prepare.celeb_a_hq_deltas_download import download_celeb_a_hq_delta_files
+from smile.data.prepare.contrib.celeb_a_download import download_celeb_a
 
 
 def _maybe_download(root_dir: Path, hq: bool=False) -> Path:

@@ -6,12 +6,12 @@ handle one attribute at a time and some can handle multiple.
 ## Download and Prepare Dataset
 For dataset split on a given feature. (Expected by CycleGAN, etc).
 ```bash
-$ python -m smile.utils.data.create_dataset --dataset-dir datasets/celeb --split-attribute Smiling
+$ python -m smile.data.prepare.create_dataset --dataset-dir datasets/celeb --split-attribute Smiling
 ```
 
 For dataset with attributes included in Tfrecords. (Expected by AttGAN, etc).
 ```bash
-$ python -m smile.utils.data.create_dataset --dataset-dir datasets/celeb --include-attributes
+$ python -m smile.data.prepare.create_dataset --dataset-dir datasets/celeb --include-attributes
 ```
 
 ## Results

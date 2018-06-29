@@ -1,8 +1,7 @@
-import zipfile
 from pathlib import Path
 
-from .contrib.celeb_a_download import download_file_from_google_drive
-from .contrib.celeb_a_download import unzip
+from smile.data.prepare.contrib.celeb_a_download import download_file_from_google_drive
+from smile.data.prepare.contrib.celeb_a_download import unzip
 
 
 _CELEB_A_HQ_DELTA_FILES = [
