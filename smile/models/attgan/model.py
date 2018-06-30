@@ -5,11 +5,7 @@ from smile.utils.tf_utils import img_summary_with_text
 
 
 def preprocess(x):
-    # TODO: Add crop and resize to data pipeline instead.
-    x = tf.image.crop_to_bounding_box(x, 26, 3, 170, 170)
-    x = tf.image.resize_images(x, (128, 128))
-    x = x * 2 - 1
-    return x
+    return x * 2 - 1
 
 
 def postprocess(x):

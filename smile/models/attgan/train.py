@@ -19,8 +19,16 @@ def run_training(model_dir: Path,
 
     model_dir.mkdir(parents=True, exist_ok=True)
 
-    train_dataset = img_and_attribute_dataset(train_tfrecord_paths, considered_attributes, hparams["batch_size"])
-    test_dataset = img_and_attribute_dataset(test_tfrecord_paths, considered_attributes, 3)
+    train_dataset = img_and_attribute_dataset(
+        train_tfrecord_paths,
+        considered_attributes,
+        batch_size=hparams["batch_size"],
+        crop_and_rescale=True)
+    test_dataset = img_and_attribute_dataset(
+        test_tfrecord_paths,
+        considered_attributes,
+        batch_size=3,
+        crop_and_rescale=True)
 
     train_iterator = train_dataset.make_initializable_iterator()
     test_iterator = test_dataset.make_initializable_iterator()
