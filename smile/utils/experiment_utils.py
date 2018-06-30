@@ -1,6 +1,9 @@
 import argparse
 import datetime
+from pathlib import Path
 from typing import Any, Dict
+
+import tensorflow as tf
 
 
 def experiment_name(modelname: str, hparams: Dict[str, Any]):
@@ -36,3 +39,19 @@ class ArgumentParser(argparse.ArgumentParser):
                 args.__dict__.pop(k)
 
         return args, hparams
+
+
+def run_training(model_dir: Path):
+    model_dir.mkdir(parents=True, exist_ok=True)
+
+    # get a model
+
+    summary_writer = tf.summary.FileWriter(str(model_dir))
+
+    scaffold = tf.train.Scaffold(local_init_op=tf.group(
+        tf.local_variables_initializer(),
+        tf.tables_initializer(),
+        iterator_initializer))
+
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
