@@ -48,24 +48,23 @@ TODO: Show results.
 TODO: Show results.
 
 ## TODO
-* Better results images per model.
+* Better results images per model. Show results at different timesteps.
+* Add evaluation method based on classifier of identities? sort of like inception score
 
-### CycleGAN
-Revisit some of these
-* WGAN-GP loss
-* Densenet architecture(s)
+### Models / Papers
+- [x] CycleGAN
+- [x] AttGAN
+- [x] UNIT (bad results, needs work)
+- [x] StarGAN (bad results, needs work)
+- [ ] DiscoGAN
+- [ ] MUNIT
+- [ ] XGAN
+- [ ] DTN
+
+### General
 * Spectral normalization
 * Progressive growing
 * Attention mechanism, see self-attention GAN
 * Facial landmarks as supervision
-
-### Other models
-* DiscoGAN
-* StarGAN (working code, bad results)
-* UNIT (working code, bad results)
-* MUNIT
-* DTN
-* XGAN
-* DA-gan model
-* AttGAN
+* Densenet architectures
 * https://github.com/yingcong/Facelet_Bank
