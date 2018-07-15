@@ -21,13 +21,10 @@ def run_training(model_dir: Path,
 
     model_dir.mkdir(parents=True, exist_ok=True)
 
-    # TODO: Add data augmentation back.
     def input_fn(paths, batch_size):
-        ds = img_dataset(paths, batch_size)
+        ds = img_dataset(paths, batch_size, crop_and_rescale=True)
         img = ds.make_one_shot_iterator().get_next()
         return img
-
-    # TODO: adapt to 128x128?
 
     cycle_gan = CycleGAN(
         input_fn(X_train_paths, batch_size=hparams["batch_size"]),
@@ -40,7 +37,7 @@ def run_training(model_dir: Path,
 
     summary_writer = tf.summary.FileWriter(str(model_dir))
 
-    max_training_steps = 250000
+    max_training_steps = 150000
 
     with tf.train.MonitoredTrainingSession(checkpoint_dir=str(model_dir), save_summaries_secs=30) as sess:
         while not sess.should_stop():

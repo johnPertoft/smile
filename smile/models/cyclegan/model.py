@@ -1,20 +1,14 @@
 import tensorflow as tf
 
-from smile.models.cyclegan import lsgan_losses
+from smile.losses import lsgan_losses
 
 
 def preprocess(x):
-    h, w = x.shape[1:-1]
-    x = x * 2 - 1
-    x = tf.image.resize_images(x, [h - 2, w - 2])
-    return x
+    return x * 2 - 1
 
 
 def postprocess(x):
-    h, w = x.shape[1:-1]
-    x = tf.image.resize_images(x, [h + 2, w + 2])
-    x = (x + 1) / 2
-    return x
+    return (x + 1) / 2
 
 
 class CycleGAN:
@@ -59,12 +53,8 @@ class CycleGAN:
                     generated_history_B[current_index].assign(B_translated[0]))
 
         # Adversarial loss (lsgan loss).
-        D_A_real = discriminator_a(A)
-        D_B_real = discriminator_b(B)
-        D_A_fake = discriminator_a(A_translated)
-        D_B_fake = discriminator_b(B_translated)
-        D_A_loss, G_BA_adv_loss = lsgan_losses(D_A_real, D_A_fake)
-        D_B_loss, G_AB_adv_loss = lsgan_losses(D_B_real, D_B_fake)
+        D_A_loss, G_BA_adv_loss = lsgan_losses(A, A_translated, discriminator_a)
+        D_B_loss, G_AB_adv_loss = lsgan_losses(B, B_translated, discriminator_b)
 
         # Cyclic consistency loss.
         B_reconstructed = generator_ab(A_translated)
@@ -82,20 +72,8 @@ class CycleGAN:
         learning_rate = tf.train.piecewise_constant(global_step,
                                                     boundaries=[start_decay_step],
                                                     values=[initial_learning_rate, initial_learning_rate / 5])
-        """
-        learning_rate = tf.cond(
-            global_step < start_decay_step,
-            lambda: initial_learning_rate,
-            lambda: tf.train.polynomial_decay(
-                learning_rate=initial_learning_rate,
-                global_step=global_step - start_decay_step,
-                decay_steps=100_000,
-                end_learning_rate=0.0,
-                power=1.0))
-        """
 
-        # TODO: from paper:
-        # "In practice, we divide the objective by 2 while optimizing D"
+        # "In practice, we divide the objective by 2 while optimizing D".
         D_A_loss = D_A_loss * 0.5
         D_B_loss = D_B_loss * 0.5
 
@@ -119,10 +97,10 @@ class CycleGAN:
             tf.summary.scalar("loss/G_BA_adv", G_BA_adv_loss),
             tf.summary.scalar("loss/D_A", D_A_loss),
             tf.summary.scalar("loss/D_B", D_B_loss),
-            tf.summary.scalar("disc_a/real", tf.reduce_mean(D_A_real)),
-            tf.summary.scalar("disc_a/fake", tf.reduce_mean(D_A_fake)),
-            tf.summary.scalar("disc_b/real", tf.reduce_mean(D_B_real)),
-            tf.summary.scalar("disc_b/fake", tf.reduce_mean(D_B_fake)),
+            tf.summary.scalar("disc_a/real", tf.reduce_mean(discriminator_a(A))),
+            tf.summary.scalar("disc_a/fake", tf.reduce_mean(discriminator_a(A_translated))),
+            tf.summary.scalar("disc_b/real", tf.reduce_mean(discriminator_b(B))),
+            tf.summary.scalar("disc_b/fake", tf.reduce_mean(discriminator_b(B_translated))),
             tf.summary.scalar("learning_rate", learning_rate)
         ))
 
@@ -177,8 +155,6 @@ class CycleGAN:
 
     def export(self, sess, export_dir):
         builder = tf.saved_model.builder.SavedModelBuilder(export_dir)
-
-        # TODO: Only include the necessary parts of the graph.
 
         def translation_signature(input_img, translated_img):
             return tf.saved_model.signature_def_utils.build_signature_def(
