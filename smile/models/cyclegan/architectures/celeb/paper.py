@@ -1,129 +1,109 @@
+import functools
+
 import tensorflow as tf
 
+from smile.utils.ops import reflect_pad
 
-def paper_generator(X, is_training, **hparams):
-    weight_initializer = tf.truncated_normal_initializer(stddev=0.02)
 
-    def conv7_stride1_k(inputs, k):
-        """7x7, 1 strided convolution with k filters."""
-        padded = tf.pad(inputs, [[0, 0], [3, 3], [3, 3], [0, 0]], "reflect")
-        return tf.layers.conv2d(
-            padded,
-            kernel_size=(7, 7),
-            strides=(1, 1),
-            filters=k,
+weight_initializer = tf.truncated_normal_initializer(stddev=0.02)
+
+def conv(x, d, k, s, norm_fn=None, activation_fn=None):
+    x = reflect_pad(x, k // 2)
+    x = tf.layers.conv2d(
+        x,
+        filters=d,
+        kernel_size=k,
+        strides=s,
+        activation=None,
+        kernel_initializer=weight_initializer,
+        use_bias=norm_fn == tf.contrib.layers.instance_norm,
+        padding="valid")
+    if norm_fn is not None:
+        x = norm_fn(x)
+    if activation_fn is not None:
+        x = activation_fn(x)
+    return x
+
+
+def generator(X, is_training, **hparams):
+    # TODO: paper/implementation difference.
+    # Paper just states that reflection padding is used but pytorch implementation uses zero padding
+    # in up- and down-sample layers.
+
+    def dconv(x, d, k, s, norm_fn=None, activation_fn=None):
+        #x = reflect_pad(x, k // 2)  # TODO: reflect padding here?
+        x = tf.layers.conv2d_transpose(
+            x,
+            filters=d,
+            kernel_size=k,
+            strides=s,
             activation=None,
             kernel_initializer=weight_initializer,
-            use_bias=False,
-            padding="valid")
-
-    def conv3_stride2_k(inputs, k):
-        """3x3, 2 strided convolution with k filters."""
-        return tf.layers.conv2d(
-            inputs,
-            kernel_size=(3, 3),
-            strides=(2, 2),
-            filters=k,
-            activation=None,
-            kernel_initializer=weight_initializer,
-            use_bias=False,
+            use_bias=norm_fn == tf.contrib.layers.instance_norm,
             padding="same")
+        if norm_fn is not None:
+            x = norm_fn(x)
+        if activation_fn is not None:
+            x = activation_fn(x)
+        return x
 
-    def res_block(inputs, k, activation):
-        net = inputs
+    norm_fn = tf.contrib.layers.instance_norm  # TODO: pytorch code sets affine=False. trainable=False is equiv?
+    activation_fn = tf.nn.relu
 
-        # Layer 1.
-        net = tf.pad(net, [[0, 0], [1, 1], [1, 1], [0, 0]], "reflect")
-        net = tf.layers.conv2d(
-            net,
-            kernel_size=(3, 3),
-            strides=(1, 1),
-            filters=k,
-            activation=None,
-            kernel_initializer=weight_initializer,
-            use_bias=False,
-            padding="valid")
-        net = tf.contrib.layers.instance_norm(net)
-        net = activation(net)
+    conv_norm_activation = functools.partial(
+        conv,
+        norm_fn=norm_fn,
+        activation_fn=activation_fn)
 
-        # Layer 2.
-        net = tf.pad(net, [[0, 0], [1, 1], [1, 1], [0, 0]], "reflect")
-        net = tf.layers.conv2d(
-            net,
-            kernel_size=(3, 3),
-            strides=(1, 1),
-            filters=k,
-            activation=None,
-            kernel_initializer=weight_initializer,
-            use_bias=False,
-            padding="valid")
-        net = tf.contrib.layers.instance_norm(net)
+    dconv_norm_activation = functools.partial(
+        dconv,
+        norm_fn=norm_fn,
+        activation_fn=activation_fn)
 
-        return inputs + net
+    def res_block(x, d):
+        x_orig = x
 
-    def deconv3_stride2_k(inputs, k):
-        """3x3. 2 strided deconvolution (transposed convolution) with k filters."""
-        return tf.layers.conv2d_transpose(
-            inputs,
-            kernel_size=(3, 3),
-            strides=(2, 2),
-            filters=k,
-            activation=None,
-            kernel_initializer=weight_initializer,
-            use_bias=False,
-            padding="same")
+        x = conv_norm_activation(x, d, 3, 1)
 
-    activation = tf.nn.elu  #tf.nn.relu  # TODO: Choose from hparams instead.
-    norm = tf.contrib.layers.instance_norm
+        x = conv(x, d, 3, 1)
+        x = norm_fn(x)
+
+        return x + x_orig
 
     # Net definition.
     net = X
-    net = activation(norm(conv7_stride1_k(net, 32)))
-    net = activation(norm(conv3_stride2_k(net, 64)))
-    net = activation(norm(conv3_stride2_k(net, 128)))
-    for i in range(6):
-        net = res_block(net, 128, activation)
-    net = activation(norm(deconv3_stride2_k(net, 64)))
-    net = activation(norm(deconv3_stride2_k(net, 32)))
-    net = tf.nn.tanh(conv7_stride1_k(net, 3))
+    net = conv_norm_activation(net, 32, 7, 1)
+    net = conv_norm_activation(net, 64, 3, 2)
+    net = conv_norm_activation(net, 128, 3, 2)
+    for _ in range(6):
+        net = res_block(net, 128)
+    net = dconv_norm_activation(net, 64, 3, 2)
+    net = dconv_norm_activation(net, 32, 3, 2)
+    net = conv(net, 3, 7, 1)
+    net = tf.nn.tanh(net)
 
     return net
 
 
-def paper_discriminator(X, is_training, **hparams):
-    weight_initializer = tf.truncated_normal_initializer(stddev=0.02)
+def discriminator(X, is_training, **hparams):
+    norm_fn = tf.contrib.layers.instance_norm
+    activation_fn = tf.nn.leaky_relu
 
-    def conv4_stride2_k(inputs, k):
-        return tf.layers.conv2d(
-            inputs,
-            kernel_size=(4, 4),
-            strides=(2, 2),
-            filters=k,
-            activation=None,
-            kernel_initializer=weight_initializer,
-            use_bias=False,
-            padding="same")
-
-    activation = tf.nn.leaky_relu
-    norm = tf.contrib.layers.instance_norm
+    conv_norm_activation = functools.partial(
+        conv,
+        norm_fn=norm_fn,
+        activation_fn=activation_fn)
 
     # Net definition.
     net = X
-    net = activation(conv4_stride2_k(net, 64))
-    net = activation(norm(conv4_stride2_k(net, 128)))
-    net = activation(norm(conv4_stride2_k(net, 256)))
-    net = activation(norm(conv4_stride2_k(net, 512)))
-    net = tf.layers.conv2d(
-        net,
-        kernel_size=(4, 4),
-        strides=(1, 1),
-        filters=1,
-        activation=None,
-        padding="same")
+    net = activation_fn(conv(net, 64, 4, 2))
+    net = conv_norm_activation(net, 128, 4, 2)
+    net = conv_norm_activation(net, 256, 4, 2)
+    net = conv_norm_activation(net, 512, 4, 2)
+    net = conv(net, 1, 4, 1)
 
-    # Note: The discriminator returns a tensor T of shape (?, x, y, 1)
-    # where each T_(i,j) corresponds to the discriminator's output for one
-    # larger patch of the input image.
-    # See https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/issues/39
+    # Note: This is patch-gan, i.e. the output is a tensor of shape (?, h, w, 1)
+    # where each element corresponds to the discriminator's output for a larger input
+    # patch.
 
     return net

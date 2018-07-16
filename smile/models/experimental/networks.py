@@ -72,3 +72,10 @@ def sn_dconv(x, d, k, s, use_bias=True, padding="SAME", n_power_iterations=1):
         b = tf.get_variable("b", shape=(d_out,), initializer=tf.initializers.constant(0.0))
         x = tf.nn.bias_add(x, b)
     return x
+
+
+def self_attention(x):
+    f = None
+    g = None
+
+
