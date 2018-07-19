@@ -13,7 +13,7 @@ def lsgan_losses(x_real: tf.Tensor,
     :param x_fake: Tensor holding the fake samples.
     :param discriminator: Callable returning the discriminator network's output for a given tensor.
                           Assumes variable sharing is taken care of (e.g. by tf.make_template).
-    :return:
+    :return: Loss scalars for discriminator and generator.
     """
 
     d_real = discriminator(x_real)

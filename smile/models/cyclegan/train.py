@@ -37,13 +37,15 @@ def run_training(model_dir: Path,
 
     summary_writer = tf.summary.FileWriter(str(model_dir))
 
-    max_training_steps = 150000
+    max_training_steps = 200000
 
     with tf.train.MonitoredTrainingSession(checkpoint_dir=str(model_dir), save_summaries_secs=30) as sess:
         while not sess.should_stop():
             i = cycle_gan.train_step(sess, summary_writer)
             if i > max_training_steps:
                 break
+
+        cycle_gan.generate_samples(sess, str(model_dir / "testsamples.png"))
 
     # Note: tf.train.MonitoredTrainingSession finalizes the graph so can't export from it.
     with tf.Session() as sess:

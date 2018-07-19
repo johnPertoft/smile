@@ -1,3 +1,5 @@
+import numpy as np
+import skimage.io
 import tensorflow as tf
 
 from smile.losses import lsgan_losses
@@ -135,6 +137,10 @@ class CycleGAN:
         self.scalar_summaries = scalar_summaries
         self.image_summaries = image_summaries
 
+        # TODO: temp
+        self.A_translated_sample = tf.concat((A_test, B_translated_test), axis=2)
+        self.B_translated_sample = tf.concat((B_test, A_translated_test), axis=2)
+
         # Handles for exporting.
         self.A_input = tf.placeholder(tf.float32, [None] + A_train.get_shape().as_list()[1:])
         self.B_translated = postprocess(generator_ab(preprocess(self.A_input)))
@@ -152,6 +158,18 @@ class CycleGAN:
             summary_writer.add_summary(image_summaries, i)
 
         return i
+
+    def generate_samples(self, sess, fname):
+        # TODO: replace this with general script using the exported models instead.
+
+        img = np.vstack((
+            sess.run(self.A_translated_sample),
+            sess.run(self.B_translated_sample)
+        ))
+
+        _, _, w, c = img.shape
+        img = img.reshape((-1, w, c))
+        skimage.io.imsave(fname, img)
 
     def export(self, sess, export_dir):
         builder = tf.saved_model.builder.SavedModelBuilder(export_dir)
