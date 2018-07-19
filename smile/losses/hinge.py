@@ -3,12 +3,12 @@ from typing import Callable, Tuple
 import tensorflow as tf
 
 
-def lsgan_losses(x_real: tf.Tensor,
+def hinge_losses(x_real: tf.Tensor,
                  x_fake: tf.Tensor,
                  discriminator: Callable[[tf.Tensor], tf.Tensor]) -> Tuple[tf.Tensor, tf.Tensor]:
     """
-    Returns losses as defined in "Least Squares Generative Adversarial Networks."
-    Reference: https://arxiv.org/abs/1611.04076
+    Returns losses based on hinge loss as used in "Margin Adaptation for Generative Adversarial Networks".
+    Reference: https://arxiv.org/abs/1704.03817
     :param x_real: Real samples tensor.
     :param x_fake: Fake samples tensor.
     :param discriminator: Callable returning the discriminator network's output for a given tensor.
@@ -16,14 +16,12 @@ def lsgan_losses(x_real: tf.Tensor,
     :return: Loss scalars for discriminator and generator.
     """
 
+    # TODO: Adaptiveness from paper?
+
     d_real = discriminator(x_real)
     d_fake = discriminator(x_fake)
 
-    d_loss = tf.losses.mean_squared_error(tf.ones_like(d_real), d_real) + \
-             tf.losses.mean_squared_error(tf.zeros_like(d_fake), d_fake)
-    d_loss = d_loss / 2.0
+    d_loss = tf.reduce_mean(tf.maximum(1.0 - d_real, 0.0)) + \
+             tf.reduce_mean(tf.maximum(1.0 + d_fake, 0.0))
 
-    g_loss = tf.losses.mean_squared_error(tf.ones_like(d_fake), d_fake)
-    g_loss = g_loss / 2.0
-
-    return d_loss, g_loss
+    g_loss = -tf.reduce_mean(d_fake)

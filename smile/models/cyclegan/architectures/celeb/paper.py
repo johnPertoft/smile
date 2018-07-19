@@ -7,6 +7,7 @@ from smile.utils.ops import reflect_pad
 
 weight_initializer = tf.truncated_normal_initializer(stddev=0.02)
 
+
 def conv(x, d, k, s, norm_fn=None, activation_fn=None):
     x = reflect_pad(x, k // 2)
     x = tf.layers.conv2d(
@@ -25,27 +26,28 @@ def conv(x, d, k, s, norm_fn=None, activation_fn=None):
     return x
 
 
+def dconv(x, d, k, s, norm_fn=None, activation_fn=None):
+    #x = reflect_pad(x, k // 2)  # TODO: reflect padding here?
+    x = tf.layers.conv2d_transpose(
+        x,
+        filters=d,
+        kernel_size=k,
+        strides=s,
+        activation=None,
+        kernel_initializer=weight_initializer,
+        use_bias=norm_fn == tf.contrib.layers.instance_norm,
+        padding="same")
+    if norm_fn is not None:
+        x = norm_fn(x)
+    if activation_fn is not None:
+        x = activation_fn(x)
+    return x
+
+
 def generator(X, is_training, **hparams):
     # TODO: paper/implementation difference.
     # Paper just states that reflection padding is used but pytorch implementation uses zero padding
     # in up- and down-sample layers.
-
-    def dconv(x, d, k, s, norm_fn=None, activation_fn=None):
-        #x = reflect_pad(x, k // 2)  # TODO: reflect padding here?
-        x = tf.layers.conv2d_transpose(
-            x,
-            filters=d,
-            kernel_size=k,
-            strides=s,
-            activation=None,
-            kernel_initializer=weight_initializer,
-            use_bias=norm_fn == tf.contrib.layers.instance_norm,
-            padding="same")
-        if norm_fn is not None:
-            x = norm_fn(x)
-        if activation_fn is not None:
-            x = activation_fn(x)
-        return x
 
     norm_fn = tf.contrib.layers.instance_norm  # TODO: pytorch code sets affine=False. trainable=False is equiv?
     activation_fn = tf.nn.relu
@@ -63,7 +65,9 @@ def generator(X, is_training, **hparams):
     def res_block(x, d):
         x_orig = x
 
-        x = conv_norm_activation(x, d, 3, 1)
+        x = conv(x, d, 3, 1)
+        x = norm_fn(x)
+        x = activation_fn(x)
 
         x = conv(x, d, 3, 1)
         x = norm_fn(x)

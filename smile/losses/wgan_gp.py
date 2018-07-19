@@ -9,11 +9,11 @@ def wgan_gp_losses(x_real: tf.Tensor,
     """
     Returns losses as defined in "Improved Training of Wasserstein GANs".
     Reference: https://arxiv.org/abs/1704.00028
-    :param x_real: Tensor holding the real samples.
-    :param x_fake: Tensor holding the fake samples.
+    :param x_real: Real samples tensor.
+    :param x_fake: Fake samples tensor.
     :param critic: Callable returning the critic network's output for a given tensor.
                    Assumes variable sharing is taken care of (e.g. by tf.make_template).
-    :return: The critic and generator loss.
+    :return: Loss scalars for critic and generator.
     """
 
     # Interpolate between x_real and x_fake.
