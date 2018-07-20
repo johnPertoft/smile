@@ -30,7 +30,9 @@ For more options:
 $ python -m smile.cyclegan.train --help
 ```
 
-Some cherrypicks.
+![cyclegan 128x128](pics/cyclegan128x128.png)
+
+Some cherrypicks from full celeb image size.
 
 ![alt text](pics/cherrypick1.png)
 
