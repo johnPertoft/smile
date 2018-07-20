@@ -1,7 +1,9 @@
+import numpy as np
+import skimage.io
 import tensorflow as tf
 
 from smile.models.attgan.loss import classification_loss, lsgan_losses, wgan_gp_losses
-from smile.utils.tf_utils import img_summary_with_text
+from smile.utils.experiment.summaries import img_summary_with_text
 
 
 def preprocess(x):
@@ -93,7 +95,7 @@ class AttGAN:
         discriminator_classifier_loss = (hparams["lambda_cls_d"] * classifier_classification_loss +
                                          discriminator_adversarial_loss)
 
-        # TODO: Classifier needs regularization.
+        # TODO: Add regularization to classifier.
         # Or early stopping (stop updating this after a while)
 
         global_step = tf.train.get_or_create_global_step()
@@ -159,6 +161,9 @@ class AttGAN:
                                   postprocess(x_test_translated), sampled_attributes_test)
         ))
 
+        # TODO: Need to add the text
+        self.translated_samples = tf.concat((x_test, x_test_translated), axis=2)
+
         self.is_training = is_training
         self.global_step = global_step
         self.global_step_increment = global_step.assign_add(1)
@@ -183,6 +188,12 @@ class AttGAN:
             summary_writer.add_summary(image_summaries, i)
 
         return i
+
+    def generate_samples(self, sess, fname):
+        img = sess.run(self.translated_samples)
+        _, _, w, c = img.shape
+        img = img.reshape((-1, w, c))
+        skimage.io.imsave(fname, img)
 
     def export(self, sess, export_dir):
         pass

@@ -1,5 +1,3 @@
-import functools
-
 import numpy as np
 import tensorflow as tf
 from PIL import Image
@@ -9,6 +7,11 @@ from PIL import ImageDraw
 def img_summary(name, left, right):
     side_by_side = tf.concat((left, right), axis=2)
     return tf.summary.image(name, side_by_side)
+
+
+def imgs_with_attributes(imgs, attributes_indicator, attribute_names):
+    assert attributes_indicator.shape[1] == len(attribute_names)
+
 
 
 def img_summary_with_text(name, attribute_names,

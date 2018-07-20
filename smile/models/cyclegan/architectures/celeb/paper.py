@@ -2,7 +2,7 @@ import functools
 
 import tensorflow as tf
 
-from smile.utils.ops import reflect_pad
+from smile.ops import reflect_pad
 
 
 weight_initializer = tf.truncated_normal_initializer(stddev=0.02)

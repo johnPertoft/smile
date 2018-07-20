@@ -38,9 +38,8 @@ class CycleGAN:
 
         global_step = tf.train.get_or_create_global_step()
 
-        # TODO: Read paper again.
         # I think paper used batch size 1, but we can just pick the first image per batch for higher batch sizes
-        # I guess.
+        # I guess. # TODO: Read paper again.
         update_history = None
         if hparams["use_history"]:
             with tf.variable_scope("history"):
@@ -106,10 +105,6 @@ class CycleGAN:
             tf.summary.scalar("learning_rate", learning_rate)
         ))
 
-        # TODO: gradient summaries.
-        # TODO: Show heatmap of discriminator output.
-        # TODO: Show heatmap of what discriminator cares about? should be mainly mouth etc.
-
         A_translated_test = postprocess(generator_ba(preprocess(B_test)))
         B_translated_test = postprocess(generator_ab(preprocess(A_test)))
 
@@ -120,7 +115,6 @@ class CycleGAN:
             tf.summary.image("B_to_A_test", tf.concat((B_test[:3], A_translated_test[:3]), axis=2))
         ))
 
-        # TODO: possibly run on separate batches instead.
         train_step_ops = [D_A_optimization_step, D_B_optimization_step,
                           G_AB_optimization_step, G_BA_optimization_step,
                           global_step.assign_add(1)]
@@ -137,7 +131,6 @@ class CycleGAN:
         self.scalar_summaries = scalar_summaries
         self.image_summaries = image_summaries
 
-        # TODO: temp
         self.A_translated_sample = tf.concat((A_test, B_translated_test), axis=2)
         self.B_translated_sample = tf.concat((B_test, A_translated_test), axis=2)
 
@@ -160,8 +153,6 @@ class CycleGAN:
         return i
 
     def generate_samples(self, sess, fname):
-        # TODO: replace this with general script using the exported models instead.
-
         img = np.vstack((
             sess.run(self.A_translated_sample),
             sess.run(self.B_translated_sample)

@@ -6,7 +6,7 @@ import tensorflow as tf
 from smile.data.celeb import img_and_attribute_dataset
 from smile.models.attgan import AttGAN
 from smile.models.attgan.architectures import celeb
-from smile import utils
+from smile.utils import experiment
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -74,6 +74,8 @@ def run_training(model_dir: Path,
             if i > max_training_steps:
                 break
 
+        attgan.generate_samples(sess, str(model_dir / "testsamples.png"))
+
     # Note: tf.train.MonitoredTrainingSession finalizes the graph so can't export from it.
     with tf.Session() as sess:
         tf.train.Saver().restore(sess, tf.train.latest_checkpoint(str(model_dir)))
@@ -81,7 +83,7 @@ def run_training(model_dir: Path,
 
 
 if __name__ == "__main__":
-    arg_parser = utils.ArgumentParser()
+    arg_parser = experiment.ArgumentParser()
     arg_parser.add_argument("--model-dir", required=False, help="Directory for checkpoints etc")
     arg_parser.add_argument("--train_tfrecords", nargs="+", required=True, help="train tfrecords files for attgan")
     arg_parser.add_argument("--test_tfrecords", nargs="+", required=True, help="test tfrecords files for attgan")
@@ -99,7 +101,7 @@ if __name__ == "__main__":
 
     ROOT_RUNS_DIR = Path("runs")
     if args.model_dir is None:
-        model_dir = ROOT_RUNS_DIR / Path(utils.experiment_name("attgan", hparams))
+        model_dir = ROOT_RUNS_DIR / Path(experiment.experiment_name("attgan", hparams))
     else:
         model_dir = Path(args.model_dir)
 

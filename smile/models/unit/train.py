@@ -3,10 +3,10 @@ from typing import List
 
 import tensorflow as tf
 
-from smile import utils
 from smile.models.unit.architectures.celeb import paper
 from smile.models.unit.input import celeb_input_fn
 from smile.models.unit.model import UNIT
+from smile.utils import experiment
 
 
 def run_training(model_dir: Path,
@@ -36,7 +36,7 @@ def run_training(model_dir: Path,
 
 
 if __name__ == "__main__":
-    arg_parser = utils.ArgumentParser()
+    arg_parser = experiment.ArgumentParser()
     arg_parser.add_argument("--model-dir", required=False, help="Directory for checkpoints etc.")
     arg_parser.add_argument("--X-train", nargs="+", required=True, help="Tfrecord train files for first image domain.")
     arg_parser.add_argument("--X-test", nargs="+", required=True, help="Tfrecord test files for first image domain.")
@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     ROOT_RUNS_DIR = Path("runs")
     if args.model_dir is None:
-        model_dir = ROOT_RUNS_DIR / Path(utils.experiment_name("unit", hparams))
+        model_dir = ROOT_RUNS_DIR / Path(experiment.experiment_name("unit", hparams))
     else:
         model_dir = Path(args.model_dir)
 

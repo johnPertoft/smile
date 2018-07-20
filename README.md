@@ -70,3 +70,4 @@ TODO: Show results.
 * Facial landmarks as supervision
 * Densenet architectures
 * https://github.com/yingcong/Facelet_Bank
+* Simultaneous vs alternating gradient descent.
