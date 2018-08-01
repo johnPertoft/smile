@@ -64,11 +64,28 @@ def run_training(model_dir: Path,
                 break
 
 
-
-
 if __name__ == "__main__":
     arg_parser = experiment.ArgumentParser()
     arg_parser.add_argument("--model-dir", required=False, help="Directory for checkpoints etc.")
     arg_parser.add_argument("--train_tfrecords", nargs="+", required=True, help="train tfrecords files.")
     arg_parser.add_argument("--test_tfrecords", nargs="+", required=True, help="test tfrecords files.")
 
+    arg_parser.add_hparam("--batch_size", default=32, type=int, help="Batch size")
+
+    args, hparams = arg_parser.parse_args()
+
+    ROOT_RUNS_DIR = Path("runs")
+    if args.model_dir is None:
+        model_dir = ROOT_RUNS_DIR / Path(experiment.experiment_name("experimental", hparams))
+    else:
+        model_dir = Path(args.model_dir)
+
+    # TODO: Param for this. Handle mutual exclusiveness?
+    considered_attributes = ["Smiling", "Male", "Mustache", "5_o_Clock_Shadow", "Blond_Hair"]
+
+    run_training(
+        model_dir,
+        args.train_tfrecords,
+        args.test_tfrecords,
+        considered_attributes,
+        **hparams)

@@ -19,11 +19,3 @@ $ python -m smile.models.cyclegan.train \
 ![cyclegan](imgs/cyclegan_paper.png)
 
 ---
-
-```bash
-$ python -m smile.models.cyclegan.train \
-    --X-train datasets/celeb/tfrecords/smiling/train/* \
-    --X-test datasets/celeb/tfrecords/smiling/test/* \
-    --Y-train datasets/celeb/tfrecords/not_smiling/train/* \
-    --Y-test datasets/celeb/tfrecords/not_smiling/test/*
-```

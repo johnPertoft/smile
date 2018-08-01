@@ -27,10 +27,10 @@ $ python -m smile.models.cyclegan.train \
 
 For more options:
 ```bash
-$ python -m smile.cyclegan.train --help
+$ python -m smile.models.cyclegan.train --help
 ```
 
-![cyclegan 128x128](pics/cyclegan128x128.png)
+![cyclegan](results/imgs/cyclegan_paper.png)
 
 Some cherrypicks from full celeb image size.
 
@@ -58,6 +58,8 @@ TODO: Show results.
 - [x] AttGAN
 - [x] UNIT (bad results, needs work)
 - [x] StarGAN (bad results, needs work)
+- [ ] Sparsely Grouped GAN
+- [ ] Fusion GAN
 - [ ] DiscoGAN
 - [ ] MUNIT
 - [ ] XGAN
@@ -71,3 +73,4 @@ TODO: Show results.
 * Densenet architectures
 * https://github.com/yingcong/Facelet_Bank
 * Simultaneous vs alternating gradient descent.
+* Standardize architecture for comparisons?

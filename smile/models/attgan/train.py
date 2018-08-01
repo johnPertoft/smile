@@ -38,8 +38,12 @@ def run_training(model_dir: Path,
 
     iterator_initializer = tf.group(train_iterator.initializer, test_iterator.initializer)
 
-    #model_architecture = celeb.paper
-    model_architecture = celeb.resnet
+    if hparams["model_architecture"] == "paper":
+        model_architecture = celeb.paper
+    elif hparams["model_architecture"] == "resnet":
+        model_architecture = celeb.resnet
+    else:
+        raise ValueError("Invalid model architecture.")
 
     attgan = AttGAN(
         considered_attributes,
@@ -62,7 +66,7 @@ def run_training(model_dir: Path,
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
 
-    max_training_steps = 150000
+    max_training_steps = 100000
 
     with tf.train.MonitoredTrainingSession(
             scaffold=scaffold,
@@ -96,6 +100,7 @@ if __name__ == "__main__":
                           help="Weight of attribute classification generator loss. Relative to GAN loss part.")
     arg_parser.add_hparam("--adversarial_loss_type", default="wgan-gp", type=str,
                           help="Adversarial loss function to use.")
+    arg_parser.add_hparam("--model_architecture", default="paper", help="Model architecture.")  # TODO: Separate choices for enc/dec/disc etc
 
     args, hparams = arg_parser.parse_args()
 
