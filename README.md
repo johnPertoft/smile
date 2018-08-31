@@ -17,17 +17,17 @@ $ python -m smile.data.prepare.create_dataset --dataset-dir datasets/celeb --inc
 ## Results
 
 ### CycleGAN
+For all options:
+```bash
+$ python -m smile.models.cyclegan.train --help
+```
+
 ```bash
 $ python -m smile.models.cyclegan.train \
     --X-train datasets/celeb/tfrecords/smiling/train/* \
     --X-test datasets/celeb/tfrecords/smiling/test/* \
     --Y-train datasets/celeb/tfrecords/not_smiling/train/* \
     --Y-test datasets/celeb/tfrecords/not_smiling/test/*
-```
-
-For more options:
-```bash
-$ python -m smile.models.cyclegan.train --help
 ```
 
 ![cyclegan](results/imgs/cyclegan_paper.png)
@@ -67,10 +67,15 @@ TODO: Show results.
 
 ### General
 * Spectral normalization
-* Progressive growing
+* Progressive growing utility
 * Attention mechanism, see self-attention GAN
 * Facial landmarks as supervision
-* Densenet architectures
 * https://github.com/yingcong/Facelet_Bank
 * Simultaneous vs alternating gradient descent.
-* Standardize architecture for comparisons?
+* TTUR
+* Standardize architecture for comparisons. Densenet, resnet, unet.
+* Try other upsampling methods, see some checkerboarding sometimes. Or tune kernel sizes / strides.
+
+### Engineering
+* Docker for reproducing. 
+* Add terraform/cloudformation scripts for cloud resource management.

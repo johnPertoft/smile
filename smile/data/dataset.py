@@ -1,13 +1,10 @@
 from multiprocessing import cpu_count
-from typing import List, Optional
+from typing import List
 
 import tensorflow as tf
 
 
 _CELEB_A_SHAPE = (218, 178, 3)
-
-
-# TODO: Remove this file?
 
 
 def _parse_serialized_img(bytes, crop_and_rescale):
@@ -22,24 +19,11 @@ def _parse_serialized_img(bytes, crop_and_rescale):
     return img
 
 
-def _repeated_batched_dataset(ds, batch_size, num_epochs):
-    ds = ds.shuffle(1024)
-    ds = ds.repeat(num_epochs)
-    ds = ds.batch(batch_size)
-    ds = ds.prefetch(2)
-    return ds
-
-
-def img_dataset(tfrecord_paths: List[str],
-                batch_size: int,
-                crop_and_rescale: bool=False,
-                num_epochs: Optional[int]=None) -> tf.data.Dataset:
+def dataset(tfrecord_paths: List[str], crop_and_rescale: bool=False) -> tf.data.Dataset:
     """
     Create dataset from tfrecords containing raw encoded celeb-a images.
     :param tfrecord_paths: paths to tfrecord files.
-    :param batch_size: batch size.
     :param crop_and_rescale: whether images should be cropped and rescaled to 128x128.
-    :param num_epochs: number of epochs.
     :return: the dataset.
     """
 
@@ -52,25 +36,20 @@ def img_dataset(tfrecord_paths: List[str],
 
     ds = tf.data.TFRecordDataset(tfrecord_paths)
     ds = ds.map(parse_serialized, num_parallel_calls=cpu_count())
-    ds = _repeated_batched_dataset(ds, batch_size, num_epochs)
 
     return ds
 
 
-def img_and_attribute_dataset(tfrecord_paths: List[str],
-                              considered_attributes: List[str],
-                              batch_size: int,
-                              crop_and_rescale: bool=False,
-                              num_epochs=None,
-                              filter_examples_without_attributes: bool=True) -> tf.data.Dataset:
+def dataset_with_attributes(tfrecord_paths: List[str],
+                            considered_attributes: List[str],
+                            crop_and_rescale: bool=False,
+                            filter_examples_without_attributes: bool=True) -> tf.data.Dataset:
     """
-    Create dataset from tfrecords containing raw encoded celeb-a images and 
+    Create dataset from tfrecords containing raw encoded celeb-a images and
     their attributes as tf.VarLenFeature strings.
     :param tfrecord_paths: paths to tfrecord files.
-    :param considered_attributes: 
-    :param batch_size: batch size.
+    :param considered_attributes: The attributes to include in attribute set per image.
     :param crop_and_rescale: whether images should be cropped and rescaled to 128x128.
-    :param num_epochs: number of epochs.
     :param filter_examples_without_attributes: whether examples without any of the considered attributes
                                                should be filtered.
     :return: the dataset
@@ -102,6 +81,5 @@ def img_and_attribute_dataset(tfrecord_paths: List[str],
     ds = ds.map(parse_serialized, num_parallel_calls=cpu_count())
     if filter_examples_without_attributes:
         ds = ds.filter(at_least_one_considered_attribute)
-    ds = _repeated_batched_dataset(ds, batch_size, num_epochs)
 
     return ds

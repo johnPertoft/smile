@@ -2,8 +2,8 @@ from functools import partial
 
 import tensorflow as tf
 
-from .ops import sn_conv
-from .ops import sn_dconv
+from smile.ops import sn_conv
+from smile.ops import sn_dconv
 
 
 def encoder(x, is_training, **hparams):

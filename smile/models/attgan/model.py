@@ -1,9 +1,11 @@
-import numpy as np
 import skimage.io
 import tensorflow as tf
 
-from smile.models.attgan.loss import classification_loss, lsgan_losses, wgan_gp_losses
-from smile.utils.experiment.summaries import img_summary_with_text
+from smile.experiments.summaries import img_summary_with_text
+from smile.models import Model
+from .loss import classification_loss
+from .loss import lsgan_losses
+from .loss import wgan_gp_losses
 
 
 def preprocess(x):
@@ -14,7 +16,7 @@ def postprocess(x):
     return (x + 1) / 2
 
 
-class AttGAN:
+class AttGAN(Model):
     def __init__(self,
                  attribute_names,
                  img, attributes,

@@ -9,5 +9,10 @@ class Model:
         pass
 
     @abc.abstractmethod
-    def generate_samples(self, sess: tf.Session):
+    def generate_samples(self, sess: tf.Session, fname: str):
+        pass
+
+    @abc.abstractmethod
+    def export(self, sess: tf.Session, export_dir: str):
+        # TODO: Put constants for saved_model signatures here.
         pass

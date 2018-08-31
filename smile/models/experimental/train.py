@@ -5,7 +5,7 @@ import tensorflow as tf
 
 from smile.data.celeb import img_and_attribute_dataset
 from smile.models.experimental import SelfAttentionAttGAN
-from smile.utils import experiment
+from smile import experiments
 
 
 def run_training(model_dir: Path,
@@ -65,7 +65,7 @@ def run_training(model_dir: Path,
 
 
 if __name__ == "__main__":
-    arg_parser = experiment.ArgumentParser()
+    arg_parser = experiments.ArgumentParser()
     arg_parser.add_argument("--model-dir", required=False, help="Directory for checkpoints etc.")
     arg_parser.add_argument("--train_tfrecords", nargs="+", required=True, help="train tfrecords files.")
     arg_parser.add_argument("--test_tfrecords", nargs="+", required=True, help="test tfrecords files.")
@@ -76,7 +76,7 @@ if __name__ == "__main__":
 
     ROOT_RUNS_DIR = Path("runs")
     if args.model_dir is None:
-        model_dir = ROOT_RUNS_DIR / Path(experiment.experiment_name("experimental", hparams))
+        model_dir = ROOT_RUNS_DIR / Path(experiments.experiment_name("experimental", hparams))
     else:
         model_dir = Path(args.model_dir)
 

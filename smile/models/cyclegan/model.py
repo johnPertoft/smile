@@ -3,26 +3,29 @@ import skimage.io
 import tensorflow as tf
 
 from smile.losses import lsgan_losses
+from smile.models import Model
 
 
-def preprocess(x):
-    return x * 2 - 1
-
-
-def postprocess(x):
-    return (x + 1) / 2
-
-
-class CycleGAN:
+class CycleGAN(Model):
     def __init__(self,
-                 A_train, A_test,
-                 B_train, B_test,
+                 a_train, a_test, a_test_static,
+                 b_train, b_test, b_test_static,
                  generator_fn, discriminator_fn,
                  **hparams):
 
-        A = A_train
-        B = B_train
+        # TODO: Rename variables.
+
+        A = a_train
+        B = b_train
         is_training = tf.placeholder_with_default(False, [])
+
+        # TODO: Put pre/post process in input_fn instead?
+
+        def preprocess(x):
+            return x * 2 - 1
+
+        def postprocess(x):
+            return (x + 1) / 2
 
         A = preprocess(A)
         B = preprocess(B)
@@ -74,18 +77,16 @@ class CycleGAN:
                                                     boundaries=[start_decay_step],
                                                     values=[initial_learning_rate, initial_learning_rate / 5])
 
-        # "In practice, we divide the objective by 2 while optimizing D".
-        D_A_loss = D_A_loss * 0.5
-        D_B_loss = D_B_loss * 0.5
-
         def get_vars(scope):
             return tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
 
         def create_update_step(loss, variables):
             return tf.train.AdamOptimizer(learning_rate, beta1=0.5).minimize(loss, var_list=variables)
 
-        D_A_optimization_step = create_update_step(D_A_loss, get_vars("discriminator_A"))
-        D_B_optimization_step = create_update_step(D_B_loss, get_vars("discriminator_B"))
+        # "In practice, we divide the objective by 2 while optimizing D".
+        D_A_optimization_step = create_update_step(D_A_loss * 0.5, get_vars("discriminator_A"))
+        D_B_optimization_step = create_update_step(D_B_loss * 0.5, get_vars("discriminator_B"))
+
         G_AB_optimization_step = create_update_step(G_AB_loss, get_vars("generator_AB"))
         G_BA_optimization_step = create_update_step(G_BA_loss, get_vars("generator_BA"))
 
@@ -105,14 +106,14 @@ class CycleGAN:
             tf.summary.scalar("learning_rate", learning_rate)
         ))
 
-        A_translated_test = postprocess(generator_ba(preprocess(B_test)))
-        B_translated_test = postprocess(generator_ab(preprocess(A_test)))
+        A_translated_test = postprocess(generator_ba(preprocess(b_test)))
+        B_translated_test = postprocess(generator_ab(preprocess(a_test)))
 
         image_summaries = tf.summary.merge((
             tf.summary.image("A_to_B_train", tf.concat((postprocess(A[:3]), postprocess(B_translated[:3])), axis=2)),
             tf.summary.image("B_to_A_train", tf.concat((postprocess(B[:3]), postprocess(A_translated[:3])), axis=2)),
-            tf.summary.image("A_to_B_test", tf.concat((A_test[:3], B_translated_test[:3]), axis=2)),
-            tf.summary.image("B_to_A_test", tf.concat((B_test[:3], A_translated_test[:3]), axis=2))
+            tf.summary.image("A_to_B_test", tf.concat((a_test[:3], B_translated_test[:3]), axis=2)),
+            tf.summary.image("B_to_A_test", tf.concat((b_test[:3], A_translated_test[:3]), axis=2))
         ))
 
         train_step_ops = [D_A_optimization_step, D_B_optimization_step,
@@ -131,13 +132,13 @@ class CycleGAN:
         self.scalar_summaries = scalar_summaries
         self.image_summaries = image_summaries
 
-        self.A_translated_sample = tf.concat((A_test, B_translated_test), axis=2)
-        self.B_translated_sample = tf.concat((B_test, A_translated_test), axis=2)
+        self.A_translated_sample = tf.concat((a_test, B_translated_test), axis=2)
+        self.B_translated_sample = tf.concat((b_test, A_translated_test), axis=2)
 
         # Handles for exporting.
-        self.A_input = tf.placeholder(tf.float32, [None] + A_train.get_shape().as_list()[1:])
+        self.A_input = tf.placeholder(tf.float32, [None] + a_train.get_shape().as_list()[1:])
         self.B_translated = postprocess(generator_ab(preprocess(self.A_input)))
-        self.B_input = tf.placeholder(tf.float32, [None] + B_train.get_shape().as_list()[1:])
+        self.B_input = tf.placeholder(tf.float32, [None] + b_train.get_shape().as_list()[1:])
         self.A_translated = postprocess(generator_ba(preprocess(self.B_input)))
 
     def train_step(self, sess, summary_writer):
