@@ -17,11 +17,6 @@ $ python -m smile.data.prepare.create_dataset --dataset-dir datasets/celeb --inc
 ## Results
 
 ### CycleGAN
-For all options:
-```bash
-$ python -m smile.models.cyclegan.train --help
-```
-
 ```bash
 $ python -m smile.models.cyclegan.train \
     --X-train datasets/celeb/tfrecords/smiling/train/* \
@@ -30,18 +25,16 @@ $ python -m smile.models.cyclegan.train \
     --Y-test datasets/celeb/tfrecords/not_smiling/test/*
 ```
 
-![cyclegan](results/imgs/cyclegan_paper.png)
+![cyclegan](results/cyclegan/runs/paper-architecture-lambda-cyclic-5.0/testsamples_final.png)
 
-Some cherrypicks from full celeb image size.
-
-![alt text](pics/cherrypick1.png)
-
-![alt text](pics/cherrypick2.png)
+[See more results](results/cyclegan/results.md)
 
 ### AttGAN
 TODO: Add command to recreate.
 
 ![alt text](pics/attgan.png)
+
+[See more results and commands to recreate](results/attgan/results.md)
 
 ### StarGAN
 TODO: Show results.

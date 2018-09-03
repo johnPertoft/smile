@@ -1,6 +1,8 @@
-# Attgan Results
+# AttGAN Results
+These are results for some AttGAN experiments.
 
-TODO: Specify the attributes used.
+* TODO: Specify the attributes used.
+* TODO: Rerun these without augmentation/fix augmentation?
 
 To see all attgan options:
 ```bash
@@ -15,7 +17,7 @@ $ python -m smile.models.attgan.train \
     --test_tfrecords datasets/celeb/tfrecords/all_attributes/test/*
 ```
 
-![attgan](imgs/attgan_paper.png)
+![attgan](runs/attgan_paper.png)
 
 ---
 
@@ -26,4 +28,11 @@ $ python -m smile.models.attgan.train \
     --model_architecture resnet
 ```
 
-![attgan](imgs/attgan_resnet.png)
+```bash
+$ python -m smile.models.attgan.train \
+    --train_tfrecords datasets/celeb/tfrecords/all_attributes/train/* \
+    --test_tfrecords datasets/celeb/tfrecords/all_attributes/test/* \
+    --model_architecture resnet
+```
+
+![attgan](attgan/runs/attgan_resnet.png)
