@@ -5,7 +5,6 @@ import tensorflow as tf
 
 from smile.data.celeb import img_and_attribute_dataset
 from smile.models.attgan import AttGAN
-from smile.models.attgan.architectures import celeb
 from smile import experiments
 
 tf.logging.set_verbosity(tf.logging.INFO)
@@ -39,9 +38,9 @@ def run_training(model_dir: Path,
     iterator_initializer = tf.group(train_iterator.initializer, test_iterator.initializer)
 
     if hparams["model_architecture"] == "paper":
-        model_architecture = celeb.paper
+        model_architecture = smile.models.attgan.architectures.paper
     elif hparams["model_architecture"] == "resnet":
-        model_architecture = celeb.resnet
+        model_architecture = smile.models.attgan.architectures.resnet
     else:
         raise ValueError("Invalid model architecture.")
 

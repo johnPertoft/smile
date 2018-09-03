@@ -8,19 +8,12 @@ from .loss import lsgan_losses
 from .loss import wgan_gp_losses
 
 
-def preprocess(x):
-    return x * 2 - 1
-
-
-def postprocess(x):
-    return (x + 1) / 2
-
-
 class AttGAN(Model):
     def __init__(self,
                  attribute_names,
                  img, attributes,
                  img_test, attributes_test,
+                 img_test_static, attributes_test_static,
                  encoder_fn,
                  decoder_fn,
                  classifier_discriminator_shared_fn,
@@ -28,9 +21,15 @@ class AttGAN(Model):
                  discriminator_private_fn,
                  **hparams):
 
+        def preprocess(x):
+            return x * 2 - 1
+
+        def postprocess(x):
+            return (x + 1) / 2
+
         is_training = tf.placeholder_with_default(False, [])
 
-        _, n_classes = attributes.get_shape()
+        n_classes = attributes.shape[1].value
 
         _cd_shared = tf.make_template(
             "classifier_discriminator_shared",
@@ -56,10 +55,7 @@ class AttGAN(Model):
         discriminator = lambda x: _d_private(_cd_shared(x))
 
         def generate_attributes(attributes):
-            # TODO: Maybe need better way of sampling target attributes
-            # Existing ones shouldn't be part of target attributes?
-            # Maybe sample number of active attributes per instance as well?
-            # Or just randomly shuffle attributes
+            # TODO: Choose a way to sample attribute vectors.
 
             # 50/50 sample per attribute.
             sampled_attributes = \
@@ -67,6 +63,9 @@ class AttGAN(Model):
 
             # Just invert every attribute.
             #sampled_attributes = tf.cast(tf.logical_not(tf.cast(attributes, tf.bool)), tf.float32)
+
+            # Randomly shuffle 1s and 0s.
+            # TODO
 
             return sampled_attributes
 
@@ -81,6 +80,7 @@ class AttGAN(Model):
 
         reconstruction_loss = tf.reduce_mean(tf.abs(x - x_reconstructed))
 
+        # TODO: Take loss fn as input instead?
         if hparams["adversarial_loss_type"] == "wgan-gp":
             discriminator_adversarial_loss, encoder_decoder_adversarial_loss = \
                 wgan_gp_losses(x, x_translated, discriminator)
@@ -98,7 +98,7 @@ class AttGAN(Model):
                                          discriminator_adversarial_loss)
 
         # TODO: Add regularization to classifier.
-        # Or early stopping (stop updating this after a while)
+        # Or try early stopping (stop updating this after a while).
 
         global_step = tf.train.get_or_create_global_step()
 
@@ -150,6 +150,7 @@ class AttGAN(Model):
 
         # TODO: Add visualizations for sliding intensity.
 
+        # TODO: Clean up summaries a bit.
         x_test = preprocess(img_test)
         sampled_attributes_test = generate_attributes(attributes_test)
         x_test_translated = decoder(encoder(x_test, is_training=False), sampled_attributes_test, is_training=False)
@@ -163,9 +164,20 @@ class AttGAN(Model):
                                   postprocess(x_test_translated), sampled_attributes_test)
         ))
 
-        # TODO: Need to add the text
-        self.translated_samples = tf.concat((x_test, x_test_translated), axis=2)
+        # TODO: Might also want combinations of attributes?
+        n_samples = tf.shape(img_test_static)[0]
+        x_test_static = preprocess(img_test_static)
+        x_test_static_repeated = tf.keras.backend.repeat_elements(x_test_static, rep=n_classes, axis=0)
+        x_test_static_target_attributes = tf.tile(tf.eye(n_classes), [n_samples, 1])
+        x_test_static_translated = decoder(encoder(x_test_static_repeated, is_training=False),
+                                           x_test_static_target_attributes, is_training=False)
+        # TODO: Reshape them as 2d array of images? Then add original images too?
+        foo = tf.reshape(x_test_static_translated, [n_classes, -1] + x_test_static.get_shape().as_list())
+        print(foo)
+        exit()
 
+        self.translation_samples = x_test_static_translated
+        self.attribute_names = attribute_names
         self.is_training = is_training
         self.global_step = global_step
         self.global_step_increment = global_step.assign_add(1)
@@ -192,6 +204,18 @@ class AttGAN(Model):
         return i
 
     def generate_samples(self, sess, fname):
+        sess.run(self.translation_samples)
+
+
+
+
+        # TODO: Fix saved images here.
+
+        # TODO: For each test image, display it unchanged in the left column
+        # Then with each attribute translated. Add text on top of each column describing it.
+
+        # TODO: Each column is one image, each row is one attribute on. Top row is original image.
+
         img = sess.run(self.translated_samples)
         _, _, w, c = img.shape
         img = img.reshape((-1, w, c))

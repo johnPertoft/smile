@@ -27,7 +27,7 @@ $ python -m smile.models.cyclegan.train \
 
 ![cyclegan](results/cyclegan/runs/paper-architecture-lambda-cyclic-5.0/testsamples_final.png)
 
-[See more results](results/cyclegan/results.md)
+[See more results and commands to recreate](results/cyclegan/results.md)
 
 ### AttGAN
 TODO: Add command to recreate.

@@ -20,6 +20,8 @@ batch_norm = partial(slim.batch_norm, scale=True, updates_collections=None)
 instance_norm = slim.instance_norm
 
 
+# TODO: Clean up this implementation. Ignore discrepancies between paper and implementation?
+
 def encoder(img, is_training, **hparams):
     #def conv_bn_lrelu(x, d, k, s):
     #    x = tf.layers.conv2d(x, filters=d, kernel_size=k, strides=s, use_bias=False, padding="same")

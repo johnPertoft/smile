@@ -55,6 +55,8 @@ def dataset_with_attributes(tfrecord_paths: List[str],
     :return: the dataset
     """
 
+    # TODO: Add check for valid attribute names.
+
     # Note: One oov bucket for all non considered attributes.
     attribute_index = tf.contrib.lookup.index_table_from_tensor(considered_attributes, num_oov_buckets=1)
 

@@ -51,8 +51,7 @@ class ArgumentParser(argparse.ArgumentParser):
 def run_experiment(model_dir: Path,
                    model: Model,
                    n_training_step: int,
-                   custom_init_op: tf.Operation=None,
-                   **hparams):
+                   custom_init_op: tf.Operation=None):
 
     model_dir.mkdir(parents=True, exist_ok=True)
     summary_writer = tf.summary.FileWriter(str(model_dir))
@@ -79,7 +78,6 @@ def run_experiment(model_dir: Path,
             i = model.train_step(sess, summary_writer)
 
             # TODO: Specify num epochs instead? Refactor input fns to return dataset instead.
-            # TODO: Handle summary writes at different frequencies too. Handle summary writes here?
 
             if i > 0 and i % sample_frequency == 0:
                 model.generate_samples(sess, str(model_dir / f"testsamples_{i}.png"))
@@ -89,20 +87,10 @@ def run_experiment(model_dir: Path,
 
         model.generate_samples(sess, str(model_dir / "testsamples_final.png"))
 
-    # TODO: Generate a gif of testsamples.
-
     # Note: tf.train.MonitoredTrainingSession finalizes the graph so can't export from it.
     with tf.Session() as sess:
         tf.train.Saver().restore(sess, tf.train.latest_checkpoint(str(model_dir)))
         model.export(sess, str(model_dir / "export"))
-
-    # TODO: One test set input for summaries
-    # TODO: One very small set of test images for generating over time
-    #   * Should be the same over the whole training.
-    #   * Should be the same for all models
-    #   * For binary translation models and non binary this might be difficult.
-    # model.generate_samples should accept input tensors.
-    # TODO: Add script for easily generating more samples given a saved_model.
 
     # TODO: Add standardized implementations of the following for easier experimentation
     #   * Losses
