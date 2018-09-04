@@ -9,6 +9,9 @@ from tqdm import tqdm
 _CELEB_A_SHAPE = (218, 178, 3)
 
 
+# TODO: Remove this file.
+
+
 def celeb_input_iterator(tfrecords_paths, considered_attributes, num_epochs=None, batch_size=64):
     """Return initializable iterator for input tensors (img, label)."""
 

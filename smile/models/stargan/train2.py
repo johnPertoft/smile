@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-import smile.models.attgan.architectures
+import smile.models.stargan.architectures
 from smile.data import dataset_with_attributes
 from smile.models.stargan import StarGAN
 from smile import experiments

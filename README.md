@@ -30,9 +30,14 @@ $ python -m smile.models.cyclegan.train \
 [See more results and commands to recreate](results/cyclegan/results.md)
 
 ### AttGAN
-TODO: Add command to recreate.
+```bash
+$ python -m smile.models.attgan.train \
+    --train-tfrecords datasets/celeb/tfrecords/all_attributes/train/* \
+    --test-tfrecords datasets/celeb/tfrecords/all_attributes/test/* \
+    --considered-attributes Smiling Male Mustache Blond_Hair
+```
 
-![alt text](pics/attgan.png)
+![alt text](results/attgan/runs/paper-architecture-wgan-gp-lambda-rec-100-1-10/testsamples_final.png)
 
 [See more results and commands to recreate](results/attgan/results.md)
 

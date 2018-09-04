@@ -1,6 +1,9 @@
 import tensorflow as tf
 
 
+# TODO: Remove this file.
+
+
 def patches_to_scalar(x):
     # TODO: Check if necessary first.
     # TODO: rename
