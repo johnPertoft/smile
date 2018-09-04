@@ -3,10 +3,9 @@ import skimage.io
 import tensorflow as tf
 
 from smile.experiments.summaries import img_summary_with_text
+from smile.losses import lsgan_losses
+from smile.losses import wgan_gp_losses
 from smile.models import Model
-from .loss import classification_loss
-from .loss import lsgan_losses
-from .loss import wgan_gp_losses
 
 
 class AttGAN(Model):
@@ -75,6 +74,9 @@ class AttGAN(Model):
         sampled_attributes = generate_attributes(attributes)
         x_translated = decoder(z, sampled_attributes)
         x_reconstructed = decoder(z, attributes)
+
+        def classification_loss(targets, logits):
+            return tf.reduce_mean(tf.losses.sigmoid_cross_entropy(targets, logits))
 
         encoder_decoder_classification_loss = classification_loss(sampled_attributes, classifier(x_translated))
         classifier_classification_loss = classification_loss(attributes, classifier(x))

@@ -1,120 +1,98 @@
-from pathlib import Path
-from typing import List
-
 import tensorflow as tf
 
-from smile.data.celeb import img_and_attribute_dataset
+import smile.models.attgan.architectures
+from smile.data import dataset_with_attributes
 from smile.models.attgan import AttGAN
 from smile import experiments
+
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
-def run_training(model_dir: Path,
-                 train_tfrecord_paths: List[str],
-                 test_tfrecord_paths: List[str],
-                 considered_attributes: List[str],
-                 **hparams):
+arg_parser = experiments.ArgumentParser()
+arg_parser.add_argument("--model-dir", required=False, help="Directory for checkpoints etc.")
+arg_parser.add_argument("--train-tfrecords", nargs="+", required=True, help="Tfrecord train files.")
+arg_parser.add_argument("--test-tfrecords", nargs="+", required=True, help="Tfrecord test files.")
+arg_parser.add_argument("--considered-attributes", nargs="+", required=True, help="Celeb-a attributes to consider.")
+arg_parser.add_argument("--steps", default=200000, type=int, help="Number of train steps.")
 
-    model_dir.mkdir(parents=True, exist_ok=True)
+arg_parser.add_hparam("--batch_size", default=32, type=int, help="Batch size")
+arg_parser.add_hparam("--lambda_rec", default=100.0, type=float, help="Weight of reconstruction loss.")
+arg_parser.add_hparam("--lambda_cls_d", default=1.0, type=float,
+                      help="Weight of attribute classification discriminator loss. Relative to GAN loss part.")
+arg_parser.add_hparam("--lambda_cls_g", default=10.0, type=float,
+                      help="Weight of attribute classification generator loss. Relative to GAN loss part.")
+arg_parser.add_hparam("--adversarial_loss_type", default="wgan-gp", type=str,
+                      help="Adversarial loss function to use.")
+arg_parser.add_hparam("--model_architecture", default="paper", help="Model architecture.")
 
-    train_dataset = img_and_attribute_dataset(
-        train_tfrecord_paths,
-        considered_attributes,
-        batch_size=hparams["batch_size"],
-        crop_and_rescale=True)
-    test_dataset = img_and_attribute_dataset(
-        test_tfrecord_paths,
-        considered_attributes,
-        batch_size=3,
-        crop_and_rescale=True)
-
-    train_iterator = train_dataset.make_initializable_iterator()
-    test_iterator = test_dataset.make_initializable_iterator()
-
-    img_train, attributes_train = train_iterator.get_next()
-    img_test, attributes_test = test_iterator.get_next()
-
-    iterator_initializer = tf.group(train_iterator.initializer, test_iterator.initializer)
-
-    if hparams["model_architecture"] == "paper":
-        model_architecture = smile.models.attgan.architectures.paper
-    elif hparams["model_architecture"] == "resnet":
-        model_architecture = smile.models.attgan.architectures.resnet
-    else:
-        raise ValueError("Invalid model architecture.")
-
-    attgan = AttGAN(
-        considered_attributes,
-        img_train, attributes_train,
-        img_test, attributes_test,
-        model_architecture.encoder,
-        model_architecture.decoder,
-        model_architecture.classifier_discriminator_shared,
-        model_architecture.classifier_private,
-        model_architecture.discriminator_private,
-        **hparams)
-
-    summary_writer = tf.summary.FileWriter(str(model_dir))
-
-    scaffold = tf.train.Scaffold(local_init_op=tf.group(
-        tf.local_variables_initializer(),
-        tf.tables_initializer(),
-        iterator_initializer))
-
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
-
-    max_training_steps = 100000
-
-    with tf.train.MonitoredTrainingSession(
-            scaffold=scaffold,
-            config=config,
-            checkpoint_dir=str(model_dir),
-            save_summaries_secs=30) as sess:
-        while not sess.should_stop():
-            i = attgan.train_step(sess, summary_writer, **hparams)
-            if i > max_training_steps:
-                break
-
-        attgan.generate_samples(sess, str(model_dir / "testsamples.png"))
-
-    # Note: tf.train.MonitoredTrainingSession finalizes the graph so can't export from it.
-    with tf.Session() as sess:
-        tf.train.Saver().restore(sess, tf.train.latest_checkpoint(str(model_dir)))
-        attgan.export(sess, str(model_dir / "export"))
+args, hparams = arg_parser.parse_args()
 
 
-if __name__ == "__main__":
-    arg_parser = experiments.ArgumentParser()
-    arg_parser.add_argument("--model-dir", required=False, help="Directory for checkpoints etc")
-    arg_parser.add_argument("--train_tfrecords", nargs="+", required=True, help="train tfrecords files for attgan")
-    arg_parser.add_argument("--test_tfrecords", nargs="+", required=True, help="test tfrecords files for attgan")
+def create_dataset(paths):
+    return dataset_with_attributes(
+        paths,
+        args.considered_attributes,
+        crop_and_rescale=True,
+        filter_examples_without_attributes=True)
 
-    arg_parser.add_hparam("--batch_size", default=32, type=int, help="Batch size")
-    arg_parser.add_hparam("--lambda_rec", default=100.0, type=float, help="Weight of reconstruction loss.")
-    arg_parser.add_hparam("--lambda_cls_d", default=1.0, type=float,
-                          help="Weight of attribute classification discriminator loss. Relative to GAN loss part.")
-    arg_parser.add_hparam("--lambda_cls_g", default=10.0, type=float,
-                          help="Weight of attribute classification generator loss. Relative to GAN loss part.")
-    arg_parser.add_hparam("--adversarial_loss_type", default="wgan-gp", type=str,
-                          help="Adversarial loss function to use.")
-    arg_parser.add_hparam("--model_architecture", default="paper", help="Model architecture.")  # TODO: Separate choices for enc/dec/disc etc
 
-    args, hparams = arg_parser.parse_args()
+train_iterator = (create_dataset(args.train_tfrecords)
+    .shuffle(1024)
+    .repeat(None)
+    .batch(hparams["batch_size"])
+    .prefetch(2)
+    .make_initializable_iterator())
 
-    ROOT_RUNS_DIR = Path("runs")
-    if args.model_dir is None:
-        model_dir = ROOT_RUNS_DIR / Path(experiments.experiment_name("attgan", hparams))
-    else:
-        model_dir = Path(args.model_dir)
+_test_ds = create_dataset(args.test_tfrecords)
 
-    # TODO: Param for this. Handle mutual exclusiveness?
-    considered_attributes = ["Smiling", "Male", "Mustache", "5_o_Clock_Shadow", "Blond_Hair"]
+test_iterator = (_test_ds
+    .shuffle(1024)
+    .repeat(None)
+    .batch(3)
+    .prefetch(2)
+    .make_initializable_iterator())
 
-    run_training(
-        model_dir,
-        args.train_tfrecords,
-        args.test_tfrecords,
-        considered_attributes,
-        **hparams)
+test_static_iterator = (_test_ds.batch(6)
+    .take(1)
+    .repeat(None)
+    .make_initializable_iterator())
+
+init_op = tf.group(
+    train_iterator.initializer,
+    test_iterator.initializer,
+    test_static_iterator.initializer)
+
+img_train, attributes_train = train_iterator.get_next()
+img_test, attributes_test = test_iterator.get_next()
+img_test_static, attributes_test_static = test_static_iterator.get_next()
+
+if hparams["model_architecture"] == "paper":
+    model_architecture = smile.models.attgan.architectures.paper
+elif hparams["model_architecture"] == "resnet":
+    model_architecture = smile.models.attgan.architectures.resnet
+else:
+    raise ValueError("Invalid model architecture.")
+
+
+attgan = AttGAN(
+    attribute_names=args.considered_attributes,
+    img=img_train,
+    attributes=attributes_train,
+    img_test=img_test,
+    attributes_test=attributes_test,
+    img_test_static=img_test_static,
+    attributes_test_static=attributes_test_static,
+    encoder_fn=model_architecture.encoder,
+    decoder_fn=model_architecture.decoder,
+    classifier_discriminator_shared_fn=model_architecture.classifier_discriminator_shared,
+    classifier_private_fn=model_architecture.classifier_private,
+    discriminator_private_fn=model_architecture.discriminator_private,
+    **hparams)
+
+
+experiments.run_experiment(
+    model_dir=experiments.ROOT_RUNS_DIR / experiments.experiment_name("attgan", hparams),
+    model=attgan,
+    n_training_step=args.steps,
+    custom_init_op=init_op)
