@@ -13,6 +13,9 @@ from smile.models.stargan.data import celeb_input_iterator
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
+# TODO: Remove this file.
+
+
 def run_celeb_training(model_dir: Path,
                        tfrecord_paths: List[str],
                        considered_attributes: List[str],

@@ -1,17 +1,7 @@
 import tensorflow as tf
 
+from smile.models import Model
 from smile.models.stargan.loss import lsgan_losses, attribute_classification_losses
-
-
-def preprocess(x):
-    """[0, 1] -> [-1, 1]"""
-    x = x[:, 1:-1, 1:-1, :]  # To make down- and upscaling easier for celeb dataset. TODO: Put elsewhere.
-    return x * 2 - 1
-
-
-def postprocess(x):
-    """[-1, 1] -> [0, 1]"""
-    return (x + 1) / 2
 
 
 def concat_attributes(x, attributes):
@@ -22,8 +12,24 @@ def concat_attributes(x, attributes):
     return tf.concat((x, c), axis=3)
 
 
-class StarGAN:
-    def __init__(self, imgs, attributes, generator_fn, discriminator_fn, lambda_cls, lambda_rec):
+class StarGAN(Model):
+    def __init__(self,
+                 attribute_names,
+                 img, attributes,
+                 img_test, attributes_test,
+                 img_test_static, attributes_test_static,
+                 generator_fn,
+                 discriminator_fn,
+                 **hparams):
+
+        # TODO: Fix this implementation.
+
+        def preprocess(x):
+            return x * 2 - 1
+
+        def postprocess(x):
+            return (x + 1) / 2
+
         is_training = tf.placeholder_with_default(False, [])
 
         imgs = preprocess(imgs)
@@ -52,8 +58,8 @@ class StarGAN:
         reconstruction_loss = tf.reduce_mean(tf.abs(imgs - reconstructed_imgs))
 
         # Full objective.
-        d_loss = d_adversarial_loss + lambda_cls * d_classification_loss
-        g_loss = g_adversarial_loss + lambda_cls * g_classification_loss + lambda_rec * reconstruction_loss
+        d_loss = d_adversarial_loss + hparams["lambda_cls"] * d_classification_loss
+        g_loss = g_adversarial_loss + hparams["lambda_cls"] * g_classification_loss + hparams["lambda_rec"] * reconstruction_loss
 
         global_step = tf.train.get_or_create_global_step()
 
@@ -92,5 +98,5 @@ class StarGAN:
             image_summaries = sess.run(self.image_summaries)
             summary_writer.add_summary(image_summaries, i)
 
-    def export(self):
+    def export(self, sess, export_dir):
         pass

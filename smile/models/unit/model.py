@@ -1,30 +1,25 @@
 import tensorflow as tf
 
+from smile.models import Model
 from smile.models.unit import vae_loss, gan_losses, cyclic_loss
 
 
-def preprocess(x):
-    h, w = x.shape[1:-1]
-    x = x * 2 - 1
-    x = tf.image.resize_images(x, [h - 2, w - 2])
-    return x
-
-
-def postprocess(x):
-    h, w = x.shape[1:-1]
-    x = tf.image.resize_images(x, [h + 2, w + 2])
-    x = (x + 1) / 2
-    return x
-
-
-class UNIT:
+class UNIT(Model):
     def __init__(self,
-                 A_train, A_test,
-                 B_train, B_test,
+                 a_train, a_test, a_test_static,
+                 b_train, b_test, b_test_static,
                  private_encoder_fn, shared_encoder_fn,
                  shared_decoder_fn, private_decoder_fn,
                  discriminator_fn,
                  **hparams):
+
+        # TODO: Fix this implementation.
+
+        def preprocess(x):
+            return x * 2 - 1
+
+        def postprocess(x):
+            return (x + 1) / 2
 
         A = A_train
         B = B_train
@@ -166,3 +161,6 @@ class UNIT:
         if i > 0 and i % 1000 == 0:
             image_summaries = sess.run(self.image_summaries)
             summary_writer.add_summary(image_summaries, i)
+
+    def export(self, sess, export_dir):
+        pass

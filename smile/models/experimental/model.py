@@ -23,6 +23,8 @@ class SelfAttentionAttGAN(Model):
                  img_test, attributes_test,
                  **hparams):
 
+        # TODO: Take adversarial loss fn as input.
+
         is_training = tf.placeholder_with_default(False, [])
         _, n_classes = attributes.get_shape()
 
