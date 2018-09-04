@@ -1,3 +1,4 @@
+import numpy as np
 import skimage.io
 import tensorflow as tf
 
@@ -169,26 +170,28 @@ class AttGAN(Model):
         x_test_static = preprocess(img_test_static)
         x_test_static_repeated = tf.keras.backend.repeat_elements(x_test_static, rep=n_classes, axis=0)
         x_test_static_target_attributes = tf.tile(tf.eye(n_classes), [n_samples, 1])
-        x_test_static_translated = decoder(encoder(x_test_static_repeated, is_training=False),
-                                           x_test_static_target_attributes, is_training=False)
-        # TODO: Reshape them as 2d array of images? Then add original images too?
-        foo = tf.reshape(x_test_static_translated, [n_classes, -1] + x_test_static.get_shape().as_list())
-        print(foo)
-        exit()
+        x_test_static_translated = postprocess(decoder(encoder(x_test_static_repeated, is_training=False),
+                                                       x_test_static_target_attributes, is_training=False))
+        x_test_static_translated = tf.reshape(x_test_static_translated,
+                                              [-1, n_classes] + x_test_static.get_shape().as_list()[1:])
+        x_test_static_translated = tf.transpose(x_test_static_translated, [1, 0, 2, 3, 4])
+        self.translation_samples = tf.concat((
+            tf.expand_dims(img_test_static, 0),
+            x_test_static_translated),
+            axis=0)
 
-        self.translation_samples = x_test_static_translated
         self.attribute_names = attribute_names
         self.is_training = is_training
         self.global_step = global_step
         self.global_step_increment = global_step.assign_add(1)
         self.enc_dec_train_step = enc_dec_train_step
         self.disc_cls_train_step = disc_cls_train_step
+        self.n_discriminator_iters = 5 if hparams["adversarial_loss_type"] == "wgan-gp" else 1
         self.scalar_summaries = scalar_summaries
         self.image_summaries = image_summaries
 
-    def train_step(self, sess, summary_writer, **hparams):
-        n_discriminator_iters = 5 if hparams["adversarial_loss_type"] == "wgan-gp" else 1
-        for _ in range(n_discriminator_iters):
+    def train_step(self, sess, summary_writer):
+        for _ in range(self.n_discriminator_iters):
             sess.run(self.disc_cls_train_step, feed_dict={self.is_training: True})
 
         _, scalar_summaries, i = sess.run(
@@ -204,22 +207,21 @@ class AttGAN(Model):
         return i
 
     def generate_samples(self, sess, fname):
-        sess.run(self.translation_samples)
-
-
-
-
-        # TODO: Fix saved images here.
-
-        # TODO: For each test image, display it unchanged in the left column
-        # Then with each attribute translated. Add text on top of each column describing it.
-
-        # TODO: Each column is one image, each row is one attribute on. Top row is original image.
-
-        img = sess.run(self.translated_samples)
-        _, _, w, c = img.shape
-        img = img.reshape((-1, w, c))
+        img = sess.run(self.translation_samples)
+        img = np.vstack([np.hstack(x) for x in img])
         skimage.io.imsave(fname, img)
+        # TODO: Add attribute names for rows.
 
     def export(self, sess, export_dir):
-        pass
+        builder = tf.saved_model.builder.SavedModelBuilder(export_dir)
+
+        # TODO: Add common export function.
+
+        builder.add_meta_graph_and_variables(
+            sess,
+            [tf.saved_model.tag_constants.SERVING],
+            signature_def_map={
+                "translate"
+            })
+
+        return builder.save()

@@ -3,8 +3,8 @@ import datetime
 from pathlib import Path
 from typing import Any
 from typing import Dict
+from typing import Optional
 
-import imageio
 import tensorflow as tf
 
 from smile.models import Model
@@ -51,11 +51,11 @@ class ArgumentParser(argparse.ArgumentParser):
 def run_experiment(model_dir: Path,
                    model: Model,
                    n_training_step: int,
-                   custom_init_op: tf.Operation=None):
+                   sample_frequency: int=10000,
+                   custom_init_op: Optional[tf.Operation]=None):
 
     model_dir.mkdir(parents=True, exist_ok=True)
     summary_writer = tf.summary.FileWriter(str(model_dir))
-    sample_frequency = 10000
 
     init_ops = [tf.global_variables_initializer(),
                 tf.local_variables_initializer(),
