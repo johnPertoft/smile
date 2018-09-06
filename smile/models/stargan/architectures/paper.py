@@ -2,9 +2,10 @@ import tensorflow as tf
 
 
 # TODO: Clean up implemenation.
+# TODO: Split up discriminator and classifier in two parts.
 
 
-def generator(X, is_training):
+def generator(x, is_training):
     weight_initializer = tf.truncated_normal_initializer(stddev=0.02)
 
     def conv7_stride1_k(inputs, k):
@@ -74,7 +75,7 @@ def generator(X, is_training):
     norm = tf.contrib.layers.instance_norm
 
     # Net definition.
-    net = X
+    net = x
     net = relu(norm(conv7_stride1_k(net, 32)))
     net = relu(norm(conv3_stride2_k(net, 64)))
     net = relu(norm(conv3_stride2_k(net, 128)))
@@ -87,7 +88,7 @@ def generator(X, is_training):
     return net
 
 
-def discriminator(X, n_attributes, is_training):
+def discriminator(x, n_attributes, is_training):
     weight_initializer = tf.truncated_normal_initializer(stddev=0.02)
 
     def conv4_stride2_k(inputs, k):
@@ -107,7 +108,7 @@ def discriminator(X, n_attributes, is_training):
     # TODO: See paper.
 
     # Net definition.
-    net = X
+    net = x
     net = lrelu(conv4_stride2_k(net, 64))
     net = lrelu(norm(conv4_stride2_k(net, 128)))
     net = lrelu(norm(conv4_stride2_k(net, 256)))

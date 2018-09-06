@@ -75,11 +75,9 @@ class AttGAN(Model):
         x_translated = decoder(z, sampled_attributes)
         x_reconstructed = decoder(z, attributes)
 
-        def classification_loss(targets, logits):
-            return tf.reduce_mean(tf.losses.sigmoid_cross_entropy(targets, logits))
-
-        encoder_decoder_classification_loss = classification_loss(sampled_attributes, classifier(x_translated))
-        classifier_classification_loss = classification_loss(attributes, classifier(x))
+        classifier_classification_loss = tf.losses.sigmoid_cross_entropy(attributes, classifier(x))
+        encoder_decoder_classification_loss = tf.losses.sigmoid_cross_entropy(sampled_attributes,
+                                                                              classifier(x_translated))
 
         reconstruction_loss = tf.reduce_mean(tf.abs(x - x_reconstructed))
 

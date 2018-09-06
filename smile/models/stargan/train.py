@@ -1,81 +1,90 @@
-import argparse
-import datetime
-from pathlib import Path
-from typing import Any, Dict, List
-
 import tensorflow as tf
 
+import smile.models.stargan.architectures
+from smile.data import dataset_with_attributes
 from smile.models.stargan import StarGAN
-from smile.models.stargan.architectures import celeb
-from smile.models.stargan.data import celeb_input_iterator
+from smile import experiments
 
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
-# TODO: Remove this file.
+arg_parser = experiments.ArgumentParser()
+arg_parser.add_argument("--model-dir", required=False, help="Directory for checkpoints etc.")
+arg_parser.add_argument("--train-tfrecords", nargs="+", required=True, help="Tfrecord train files.")
+arg_parser.add_argument("--test-tfrecords", nargs="+", required=True, help="Tfrecord test files.")
+arg_parser.add_argument("--considered-attributes", nargs="+", required=True, help="Celeb-a attributes to consider.")
+arg_parser.add_argument("--steps", default=200000, type=int, help="Number of train steps.")
+
+arg_parser.add_hparam("--batch_size", default=32, type=int, help="Batch size")
+arg_parser.add_hparam("--lambda_rec", default=10.0, type=float, help="Weight of reconstruction loss.")
+arg_parser.add_hparam("--lambda_cls", default=1.0, type=float, help="Weight of classification loss.")
+
+args, hparams = arg_parser.parse_args()
 
 
-def run_celeb_training(model_dir: Path,
-                       tfrecord_paths: List[str],
-                       considered_attributes: List[str],
-                       hparams: Dict[str, Any]):
-
-    model_dir.mkdir(parents=True, exist_ok=True)
-
-    celeb_iterator = celeb_input_iterator(
-        tfrecord_paths,
-        considered_attributes,
-        batch_size=hparams["batch_size"])
-
-    init = tf.group(tf.tables_initializer(), celeb_iterator.initializer)
-    imgs, attributes = celeb_iterator.get_next()
-
-    star_gan = StarGAN(
-        imgs,
-        attributes,
-        celeb.generator,
-        celeb.discriminator,
-        hparams["lambda_cls"],
-        hparams["lambda_rec"])
-
-    summary_writer = tf.summary.FileWriter(str(model_dir))
-
-    #with tf.train.MonitoredTrainingSession(checkpoint_dir=str(model_dir), save_summaries_secs=30) as sess:
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-        sess.run(tf.local_variables_initializer())
-        sess.run(init)
-
-        #while not sess.should_stop():
-        while True:
-            star_gan.train_step(sess, summary_writer)
+def create_dataset(paths):
+    return dataset_with_attributes(
+        paths,
+        args.considered_attributes,
+        crop_and_rescale=True,
+        filter_examples_without_attributes=True)
 
 
-if __name__ == "__main__":
-    arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument("--model-dir", required=False, help="directory for checkpoints etc")
-    arg_parser.add_argument("--tfrecords", nargs="+", required=True, help="tfrecords files for stargan")
-    args = arg_parser.parse_args()
+train_iterator = (create_dataset(args.train_tfrecords)
+    .shuffle(1024)
+    .repeat(None)
+    .batch(hparams["batch_size"])
+    .prefetch(2)
+    .make_initializable_iterator())
 
-    ROOT_RUNS_DIR = Path("runs")
-    if args.model_dir is None:
-        timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H.%M.%S')
-        model_dir = ROOT_RUNS_DIR / Path(f"stargan_{timestamp}")
-    else:
-        model_dir = Path(args.model_dir)
+_test_ds = create_dataset(args.test_tfrecords)
 
-    # TODO: Get this from program args.
-    hparams = {
-        "batch_size": 16,
-        "lambda_cls": 1.0,
-        "lambda_rec": 10.0
-    }
+test_iterator = (_test_ds
+    .shuffle(1024)
+    .repeat(None)
+    .batch(3)
+    .prefetch(2)
+    .make_initializable_iterator())
 
-    considered_attributes = ["Smiling", "Black_Hair", "Blond_Hair", "Brown_Hair", "Bald"]
+test_static_iterator = (_test_ds.batch(6)
+    .take(1)
+    .repeat(None)
+    .make_initializable_iterator())
 
-    run_celeb_training(
-        model_dir,
-        args.tfrecords,
-        considered_attributes,
-        hparams)
+init_op = tf.group(
+    train_iterator.initializer,
+    test_iterator.initializer,
+    test_static_iterator.initializer)
+
+img_train, attributes_train = train_iterator.get_next()
+img_test, attributes_test = test_iterator.get_next()
+img_test_static, attributes_test_static = test_static_iterator.get_next()
+
+
+if hparams["model_architecture"] == "paper":
+    model_architecture = smile.models.stargan.architectures.paper
+else:
+    raise ValueError("Invalid model architecture.")
+
+
+stargan = StarGAN(
+    attribute_names=args.considered_attributes,
+    img=img_train,
+    attributes=attributes_train,
+    img_test=img_test,
+    attributes_test=attributes_test,
+    img_test_static=img_test_static,
+    attributes_test_static=attributes_test_static,
+    generator_fn=model_architecture.generator,
+    classifier_discriminator_shared_fn=None,
+    classifier_private_fn=None,
+    discriminator_private_fn=None,
+    **hparams)
+
+
+experiments.run_experiment(
+    model_dir=experiments.ROOT_RUNS_DIR / experiments.experiment_name("stargan", hparams),
+    model=stargan,
+    n_training_step=args.steps,
+    custom_init_op=init_op)

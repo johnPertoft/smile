@@ -1,9 +1,10 @@
 import tensorflow as tf
 
+from smile.losses import lsgan_losses
 from smile.models import Model
-from smile.models.stargan.loss import lsgan_losses, attribute_classification_losses
 
 
+# TODO: Put this in architecture file.
 def concat_attributes(x, attributes):
     """Depthwise concatenation of image and attributes vector."""
     c = attributes[:, tf.newaxis, tf.newaxis, :]
@@ -19,10 +20,14 @@ class StarGAN(Model):
                  img_test, attributes_test,
                  img_test_static, attributes_test_static,
                  generator_fn,
-                 discriminator_fn,
+                 classifier_discriminator_shared_fn,
+                 classifier_private_fn,
+                 discriminator_private_fn,
                  **hparams):
 
         # TODO: Fix this implementation.
+        # TODO: Add support for training with facial expression dataset at the same time.
+            # Mask vector implementation etc.
 
         def preprocess(x):
             return x * 2 - 1
@@ -32,49 +37,72 @@ class StarGAN(Model):
 
         is_training = tf.placeholder_with_default(False, [])
 
-        imgs = preprocess(imgs)
-        _, n_attributes = attributes.get_shape()
+        n_attributes = attributes.shape[1].value
 
+        _cd_shared = tf.make_template(
+            "classifier_discriminator_shared",
+            classifier_discriminator_shared_fn,
+            is_training=is_training,
+            **hparams)
+        _d_private = tf.make_template(
+            "discriminator_private",
+            discriminator_private_fn,
+            is_training=is_training,
+            **hparams)
+        _c_private = tf.make_template(
+            "classifier_private",
+            classifier_private_fn,
+            n_attributes=n_attributes,
+            is_training=is_training,
+            **hparams)
+
+        # Model parts.
         generator = tf.make_template("generator", generator_fn, is_training=is_training)
-        discriminator = tf.make_template("discriminator", discriminator_fn,
-                                         n_attributes=n_attributes, is_training=is_training)
+        classifier = lambda x: _c_private(_cd_shared(x))
+        discriminator = lambda x: _d_private(_cd_shared(x))
 
-        # TODO: Generate target_attributes in a better way. I.e. original attribute shouldn't be there.
-        # TODO: Some attributes should also be mutually exclusive, like hair colors.
-        target_attributes = \
-            tf.cast(tf.random_uniform(shape=tf.shape(attributes), dtype=tf.int32, maxval=2), tf.float32)
-        translated_imgs = generator(concat_attributes(imgs, target_attributes))
+        def generate_attributes(attributes):
+            # TODO
+            #target_attributes = \
+            #   tf.cast(tf.random_uniform(shape=tf.shape(attributes), dtype=tf.int32, maxval=2), tf.float32)
+            pass
 
-        # Adversarial loss.
-        d_real, d_real_predicted_attributes = discriminator(imgs)
-        d_fake, d_fake_predicted_attributes = discriminator(translated_imgs)
-        d_adversarial_loss, g_adversarial_loss = lsgan_losses(d_real, d_fake)  # TODO: Paper uses wgan loss.
-        d_classification_loss, g_classification_loss = attribute_classification_losses(
-            d_real_predicted_attributes, attributes,
-            d_fake_predicted_attributes, target_attributes)
+        x = preprocess(img)
+        target_attributes = generate_attributes(attributes)
+        x_translated = generator(x, target_attributes)
+        x_reconstructed = generator(x_translated, attributes)
 
-        # Reconstruction loss.
-        reconstructed_imgs = generator(concat_attributes(translated_imgs, attributes))
-        reconstruction_loss = tf.reduce_mean(tf.abs(imgs - reconstructed_imgs))
+        # TODO: Paper uses wgan-gp loss.
+        # TODO: Take adversarial loss fn as input.
+        d_adversarial_loss, g_adversarial_loss = lsgan_losses(x, x_translated, discriminator)
 
-        # Full objective.
+        d_classification_loss = tf.losses.sigmoid_cross_entropy(attributes, classifier(x))
+        g_classification_loss = tf.losses.sigmoid_cross_entropy(target_attributes, classifier(x_translated))
+
+        reconstruction_loss = tf.losses.absolute_difference(x, x_reconstructed)
+
+        # Full objectives.
         d_loss = d_adversarial_loss + hparams["lambda_cls"] * d_classification_loss
         g_loss = g_adversarial_loss + hparams["lambda_cls"] * g_classification_loss + hparams["lambda_rec"] * reconstruction_loss
 
         global_step = tf.train.get_or_create_global_step()
 
-        def get_vars(scope):
-            return tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
+        d_c_vars = tf.trainable_variables("(classifier|discriminator)")
+        g_vars = tf.trainable_variables("generator")
 
-        d_update_step = tf.train.AdamOptimizer(1e-4).minimize(d_loss, var_list=get_vars("discriminator"))
-        g_update_step = tf.train.AdamOptimizer(1e-4).minimize(g_loss, var_list=get_vars("generator"))
+        d_update_step = tf.train.AdamOptimizer(1e-4).minimize(d_loss, var_list=d_c_vars)
+        g_update_step = tf.train.AdamOptimizer(1e-4).minimize(g_loss, var_list=g_vars)
 
+        # TODO: Don't group if using wgan loss.
+        # TODO: Potentially run separately anyway?
         train_step = tf.group(d_update_step, g_update_step, global_step.assign_add(1))
 
         scalar_summaries = tf.summary.merge((
             tf.summary.scalar("d_loss", d_loss),
             tf.summary.scalar("g_loss", g_loss)
         ))
+
+        # TODO: Fix summaries.
 
         # TODO: Add target attributes to image summaries.
         image_summaries = tf.summary.image("A_to_B", postprocess(tf.concat((imgs[:3], translated_imgs[:3]), axis=2)))
