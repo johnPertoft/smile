@@ -83,15 +83,14 @@ class StarGAN(Model):
 
         # Full objectives.
         d_loss = d_adversarial_loss + hparams["lambda_cls"] * d_classification_loss
-        g_loss = g_adversarial_loss + hparams["lambda_cls"] * g_classification_loss + hparams["lambda_rec"] * reconstruction_loss
+        g_loss = g_adversarial_loss + hparams["lambda_cls"] * g_classification_loss \
+                 + hparams["lambda_rec"] * reconstruction_loss
 
         global_step = tf.train.get_or_create_global_step()
 
-        d_c_vars = tf.trainable_variables("(classifier|discriminator)")
-        g_vars = tf.trainable_variables("generator")
-
-        d_update_step = tf.train.AdamOptimizer(1e-4).minimize(d_loss, var_list=d_c_vars)
-        g_update_step = tf.train.AdamOptimizer(1e-4).minimize(g_loss, var_list=g_vars)
+        tvars = lambda scope: tf.trainable_variables(scope)
+        d_update_step = tf.train.AdamOptimizer(1e-4).minimize(d_loss, var_list=tvars("(classifier|discriminator)"))
+        g_update_step = tf.train.AdamOptimizer(1e-4).minimize(g_loss, var_list=tvars("generator"))
 
         # TODO: Don't group if using wgan loss.
         # TODO: Potentially run separately anyway?

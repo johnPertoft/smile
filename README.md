@@ -56,6 +56,7 @@ TODO: Show results.
 - [x] AttGAN
 - [x] UNIT (bad results, needs work)
 - [x] StarGAN (bad results, needs work)
+- [ ] Augmented CycleGAN
 - [ ] Sparsely Grouped GAN
 - [ ] Fusion GAN
 - [ ] DiscoGAN
