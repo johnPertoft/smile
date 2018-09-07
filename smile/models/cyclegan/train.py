@@ -1,7 +1,9 @@
 import tensorflow as tf
 
+import smile.models.cyclegan.architectures
 from smile.data import dataset
-from smile.models.cyclegan import architectures
+from smile.losses import lsgan_losses
+from smile.losses import wgan_gp_losses
 from smile.models.cyclegan import CycleGAN
 from smile import experiments
 
@@ -18,11 +20,11 @@ arg_parser.add_argument("--y-test", nargs="+", required=True, help="Tfrecord tes
 arg_parser.add_argument("--steps", default=200000, type=int, help="Number of train steps.")
 
 # Required hparams.
-arg_parser.add_hparam("batch-size", default=16, type=int, help="Batch size.")
-arg_parser.add_hparam("generator-architecture", default="paper", help="Architecture for generator network.")
-arg_parser.add_hparam("discriminator-architecture", default="paper", help="Architecture for discriminator network.")
-arg_parser.add_hparam("lambda-cyclic", default=5.0, type=float, help="Cyclic consistency loss weight.")
-arg_parser.add_hparam("use-history", action="store_true",
+arg_parser.add_hparam("--batch_size", default=16, type=int, help="Batch size.")
+arg_parser.add_hparam("--model_architecture", default="paper", help="Model architecture.")
+arg_parser.add_hparam("--adversarial_loss", default="lsgan", type=str, help="Adversarial loss function to use.")
+arg_parser.add_hparam("--lambda_cyclic", default=5.0, type=float, help="Cyclic consistency loss weight.")
+arg_parser.add_hparam("--use_history", action="store_true",
                       help="Whether a history of generated images should be shown to the discriminator.")
 
 # Conditional hparams.
@@ -59,6 +61,23 @@ def first_n(paths, n):
     return img
 
 
+if hparams["model_architecture"] == "paper":
+    model_architecture = smile.models.cyclegan.architectures.paper
+else:
+    raise ValueError("Invalid model architecture.")
+
+
+if hparams["adversarial_loss"] == "lsgan":
+    adversarial_loss_fn = lsgan_losses
+    hparams["n_discriminator_iters"] = 1
+elif hparams["adversarial_loss"] == "wgan-gp":
+    adversarial_loss_fn = wgan_gp_losses
+    hparams["n_discriminator_iters"] = 5
+    hparams["wgan_gp_lambda"] = 10.0
+else:
+    raise ValueError("Invalid adversarial loss fn.")
+
+
 cyclegan = CycleGAN(
     a_train=input_fn(args.x_train, hparams["batch_size"]),
     a_test=input_fn(args.x_test, 3),
@@ -66,8 +85,9 @@ cyclegan = CycleGAN(
     b_train=input_fn(args.y_train, hparams["batch_size"]),
     b_test=input_fn(args.y_test, 3),
     b_test_static=first_n(args.y_test, 10),
-    generator_fn=architectures.GENERATORS[hparams["generator_architecture"]],
-    discriminator_fn=architectures.DISCRIMINATORS[hparams["discriminator_architecture"]],
+    generator_fn=model_architecture.generator,
+    discriminator_fn=model_architecture.discriminator,
+    adversarial_loss_fn=adversarial_loss_fn,
     **hparams)
 
 
