@@ -19,14 +19,13 @@ arg_parser.add_argument("--considered-attributes", nargs="+", required=True, hel
 arg_parser.add_argument("--steps", default=200000, type=int, help="Number of train steps.")
 
 arg_parser.add_hparam("--batch_size", default=32, type=int, help="Batch size")
+arg_parser.add_hparam("--adversarial_loss", default="wgan-gp", type=str, help="Adversarial loss function to use.")
+arg_parser.add_hparam("--model_architecture", default="paper", help="Model architecture.")
 arg_parser.add_hparam("--lambda_rec", default=100.0, type=float, help="Weight of reconstruction loss.")
 arg_parser.add_hparam("--lambda_cls_d", default=1.0, type=float,
                       help="Weight of attribute classification discriminator loss. Relative to GAN loss part.")
 arg_parser.add_hparam("--lambda_cls_g", default=10.0, type=float,
                       help="Weight of attribute classification generator loss. Relative to GAN loss part.")
-arg_parser.add_hparam("--adversarial_loss", default="wgan-gp", type=str,
-                      help="Adversarial loss function to use.")
-arg_parser.add_hparam("--model_architecture", default="paper", help="Model architecture.")
 
 args, hparams = arg_parser.parse_args()
 
@@ -79,6 +78,7 @@ else:
 
 if hparams["adversarial_loss"] == "lsgan":
     adversarial_loss_fn = lsgan_losses
+    hparams["n_discriminator_iters"] = 1
 elif hparams["adversarial_loss"] == "wgan-gp":
     adversarial_loss_fn = wgan_gp_losses
     hparams["n_discriminator_iters"] = 5
