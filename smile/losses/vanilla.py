@@ -6,7 +6,8 @@ import tensorflow as tf
 
 def gan_losses(x_real: tf.Tensor,
                x_fake: tf.Tensor,
-               discriminator: Callable[[tf.Tensor], tf.Tensor]) -> Tuple[tf.Tensor, tf.Tensor]:
+               discriminator: Callable[[tf.Tensor], tf.Tensor],
+               **hparams) -> Tuple[tf.Tensor, tf.Tensor]:
     """
     Returns losses as defined in the original "Generative Adversarial Networks" paper.
     Reference: https://arxiv.org/abs/1406.2661
@@ -30,7 +31,8 @@ def gan_losses(x_real: tf.Tensor,
 
 def non_saturating_gan_losses(x_real: tf.Tensor,
                               x_fake: tf.Tensor,
-                              discriminator: Callable[[tf.Tensor], tf.Tensor]) -> Tuple[tf.Tensor, tf.Tensor]:
+                              discriminator: Callable[[tf.Tensor], tf.Tensor],
+                              **hparams) -> Tuple[tf.Tensor, tf.Tensor]:
     """
     Returns losses as defined in the original "Generative Adversarial Networks" paper. The non saturating version.
     (This is usually the standard when people use the normal gan loss.)

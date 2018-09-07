@@ -8,7 +8,8 @@ from .gradient_penalty import gradient_penalty
 
 def wgan_gp_losses(x_real: tf.Tensor,
                    x_fake: tf.Tensor,
-                   critic: Callable[[tf.Tensor], tf.Tensor]) -> Tuple[tf.Tensor, tf.Tensor]:
+                   critic: Callable[[tf.Tensor], tf.Tensor],
+                   **hparams) -> Tuple[tf.Tensor, tf.Tensor]:
     """
     Returns losses as defined in "Improved Training of Wasserstein GANs".
     Reference: https://arxiv.org/abs/1704.00028
@@ -29,7 +30,7 @@ def wgan_gp_losses(x_real: tf.Tensor,
     # Losses for critic and generator.
     c_real = critic(x_real)
     c_fake = critic(x_fake)
-    critic_loss = -tf.reduce_mean(c_real) + tf.reduce_mean(c_fake) + gp * 10.0
+    critic_loss = -tf.reduce_mean(c_real) + tf.reduce_mean(c_fake) + gp * hparams["wgan_gp_lambda"]
     generator_loss = -tf.reduce_mean(c_fake)
 
     return critic_loss, generator_loss

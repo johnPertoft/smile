@@ -6,7 +6,8 @@ import tensorflow as tf
 
 def lsgan_losses(x_real: tf.Tensor,
                  x_fake: tf.Tensor,
-                 discriminator: Callable[[tf.Tensor], tf.Tensor]) -> Tuple[tf.Tensor, tf.Tensor]:
+                 discriminator: Callable[[tf.Tensor], tf.Tensor],
+                 **hparams) -> Tuple[tf.Tensor, tf.Tensor]:
     """
     Returns losses as defined in "Least Squares Generative Adversarial Networks."
     Reference: https://arxiv.org/abs/1611.04076
