@@ -2,6 +2,8 @@ import tensorflow as tf
 
 import smile.models.attgan.architectures
 from smile.data import dataset_with_attributes
+from smile.losses import lsgan_losses
+from smile.losses import wgan_gp_losses
 from smile.models.attgan import AttGAN
 from smile import experiments
 
@@ -22,7 +24,7 @@ arg_parser.add_hparam("--lambda_cls_d", default=1.0, type=float,
                       help="Weight of attribute classification discriminator loss. Relative to GAN loss part.")
 arg_parser.add_hparam("--lambda_cls_g", default=10.0, type=float,
                       help="Weight of attribute classification generator loss. Relative to GAN loss part.")
-arg_parser.add_hparam("--adversarial_loss_type", default="wgan-gp", type=str,
+arg_parser.add_hparam("--adversarial_loss", default="wgan-gp", type=str,
                       help="Adversarial loss function to use.")
 arg_parser.add_hparam("--model_architecture", default="paper", help="Model architecture.")
 
@@ -75,6 +77,15 @@ else:
     raise ValueError("Invalid model architecture.")
 
 
+if hparams["adversarial_loss"] == "lsgan":
+    adversarial_loss_fn = lsgan_losses
+elif hparams["adversarial_loss"] == "wgan-gp":
+    adversarial_loss_fn = wgan_gp_losses
+    hparams["n_discriminator_iters"] = 5
+    hparams["wgan_gp_lambda"] = 10.0
+else:
+    raise ValueError("Invalid adversarial loss fn.")
+
 attgan = AttGAN(
     attribute_names=args.considered_attributes,
     img=img_train,
@@ -88,6 +99,7 @@ attgan = AttGAN(
     classifier_discriminator_shared_fn=model_architecture.classifier_discriminator_shared,
     classifier_private_fn=model_architecture.classifier_private,
     discriminator_private_fn=model_architecture.discriminator_private,
+    adversarial_loss_fn=adversarial_loss_fn,
     **hparams)
 
 
