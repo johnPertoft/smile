@@ -2,17 +2,7 @@ import tensorflow as tf
 
 from smile.experiments.samples import multi_attribute_translation_samples
 from smile.experiments.summaries import img_summary_with_text
-from smile.losses import lsgan_losses
 from smile.models import Model
-
-
-# TODO: Put this in architecture file.
-def concat_attributes(x, attributes):
-    """Depthwise concatenation of image and attributes vector."""
-    c = attributes[:, tf.newaxis, tf.newaxis, :]
-    h, w = x.get_shape()[1:3]
-    c = tf.tile(c, (1, h, w, 1))
-    return tf.concat((x, c), axis=3)
 
 
 class StarGAN(Model):
@@ -100,10 +90,6 @@ class StarGAN(Model):
 
         global_step = tf.train.get_or_create_global_step()
 
-        # TODO: Don't group if using wgan loss.
-        # TODO: Potentially run separately anyway?
-        train_step = tf.group(d_update_step, g_update_step, global_step.assign_add(1))
-
         scalar_summaries = tf.summary.merge((
             tf.summary.scalar("loss/d", d_loss),
             tf.summary.scalar("loss/g", g_loss),
@@ -163,6 +149,8 @@ class StarGAN(Model):
         if i > 0 and i % 1000 == 0:
             image_summaries = sess.run(self.image_summaries)
             summary_writer.add_summary(image_summaries, i)
+
+        return i
 
     def export(self, sess, export_dir):
         pass

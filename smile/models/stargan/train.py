@@ -16,9 +16,11 @@ arg_parser.add_argument("--model-dir", required=False, help="Directory for check
 arg_parser.add_argument("--train-tfrecords", nargs="+", required=True, help="Tfrecord train files.")
 arg_parser.add_argument("--test-tfrecords", nargs="+", required=True, help="Tfrecord test files.")
 arg_parser.add_argument("--considered-attributes", nargs="+", required=True, help="Celeb-a attributes to consider.")
-arg_parser.add_argument("--steps", default=200000, type=int, help="Number of train steps.")
+arg_parser.add_argument("--steps", default=150000, type=int, help="Number of train steps.")
 
-arg_parser.add_hparam("--batch_size", default=32, type=int, help="Batch size")
+arg_parser.add_hparam("--batch_size", default=16, type=int, help="Batch size")
+arg_parser.add_hparam("--model_architecture", default="paper", help="Model architecture.")
+arg_parser.add_hparam("--adversarial_loss", default="wgan-gp", type=str, help="Adversarial loss function to use.")
 arg_parser.add_hparam("--lambda_rec", default=10.0, type=float, help="Weight of reconstruction loss.")
 arg_parser.add_hparam("--lambda_cls", default=1.0, type=float, help="Weight of classification loss.")
 
@@ -70,9 +72,10 @@ else:
     raise ValueError("Invalid model architecture.")
 
 
-if hparams["adversarial_loss_fn"] == "lsgan":
+if hparams["adversarial_loss"] == "lsgan":
     adversarial_loss_fn = lsgan_losses
-elif hparams["adversarial_loss_fn"] == "wgan-gp":
+    hparams["n_discriminator_iters"] = 1
+elif hparams["adversarial_loss"] == "wgan-gp":
     adversarial_loss_fn = wgan_gp_losses
     hparams["n_discriminator_iters"] = 5
     hparams["wgan_gp_lambda"] = 10.0
@@ -89,9 +92,9 @@ stargan = StarGAN(
     img_test_static=img_test_static,
     attributes_test_static=attributes_test_static,
     generator_fn=model_architecture.generator,
-    classifier_discriminator_shared_fn=None,
-    classifier_private_fn=None,
-    discriminator_private_fn=None,
+    classifier_discriminator_shared_fn=model_architecture.classifier_discriminator_shared,
+    classifier_private_fn=model_architecture.classifier_private,
+    discriminator_private_fn=model_architecture.discriminator_private,
     adversarial_loss_fn=adversarial_loss_fn,
     **hparams)
 

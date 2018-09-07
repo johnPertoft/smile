@@ -1,12 +1,12 @@
 import tensorflow as tf
 
-
-# TODO: Clean up implemenation.
-# TODO: Split up discriminator and classifier in two parts.
+# TODO: Make sure this follow the paper described architecture.
 
 
-def generator(x, is_training):
+def generator(x, attributes, is_training, **hparams):
     weight_initializer = tf.truncated_normal_initializer(stddev=0.02)
+
+    # TODO: depthwise concatenation of attributes.
 
     def conv7_stride1_k(inputs, k):
         padded = tf.pad(inputs, [[0, 0], [3, 3], [3, 3], [0, 0]], "reflect")
@@ -74,8 +74,14 @@ def generator(x, is_training):
     relu = tf.nn.relu
     norm = tf.contrib.layers.instance_norm
 
+    def concat_attributes(x, attributes):
+        c = attributes[:, tf.newaxis, tf.newaxis, :]
+        h, w = x.get_shape()[1:3]
+        c = tf.tile(c, (1, h, w, 1))
+        return tf.concat((x, c), axis=3)
+
     # Net definition.
-    net = x
+    net = concat_attributes(x, attributes)
     net = relu(norm(conv7_stride1_k(net, 32)))
     net = relu(norm(conv3_stride2_k(net, 64)))
     net = relu(norm(conv3_stride2_k(net, 128)))
@@ -88,7 +94,7 @@ def generator(x, is_training):
     return net
 
 
-def discriminator(x, n_attributes, is_training):
+def classifier_discriminator_shared(x, is_training, **hparams):
     weight_initializer = tf.truncated_normal_initializer(stddev=0.02)
 
     def conv4_stride2_k(inputs, k):
@@ -114,23 +120,30 @@ def discriminator(x, n_attributes, is_training):
     net = lrelu(norm(conv4_stride2_k(net, 256)))
     net = lrelu(norm(conv4_stride2_k(net, 512)))
 
+    return net
+
+
+def classifier_private(h, n_attributes, is_training, **hparams):
+    logits = tf.layers.conv2d(
+        h,
+        kernel_size=(4, 4),
+        strides=(1, 1),
+        filters=n_attributes,
+        activation=None,
+        padding="same")
+    logits = tf.reduce_mean(logits, axis=[1, 2])  # Global average pooling.
+
+    return logits
+
+
+def discriminator_private(h, is_training, **hparams):
     # Patch GAN output for whether discriminator thinks the image is real/fake.
     disc = tf.layers.conv2d(
-        net,
+        h,
         kernel_size=(4, 4),
         strides=(1, 1),
         filters=1,
         activation=None,
         padding="same")
 
-    # TODO: What should the dimensions of this be? (?, n_attributes) or patch gan?
-    predicted_attributes_logits = tf.layers.conv2d(
-        net,
-        kernel_size=(4, 4),
-        strides=(1, 1),
-        filters=n_attributes,
-        activation=None,
-        padding="same")
-    predicted_attributes_logits = tf.reduce_mean(predicted_attributes_logits, axis=[1, 2])  # Global average pooling.
-
-    return disc, predicted_attributes_logits
+    return disc
