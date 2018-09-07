@@ -3,7 +3,6 @@ import skimage.io
 import tensorflow as tf
 
 from smile.experiments.summaries import img_summary
-from smile.losses import lsgan_losses
 from smile.models import Model
 
 

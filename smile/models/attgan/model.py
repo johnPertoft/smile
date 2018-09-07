@@ -4,8 +4,6 @@ import tensorflow as tf
 
 from smile.experiments.samples import multi_attribute_translation_samples
 from smile.experiments.summaries import img_summary_with_text
-from smile.losses import lsgan_losses
-from smile.losses import wgan_gp_losses
 from smile.models import Model
 
 
