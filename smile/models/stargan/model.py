@@ -1,5 +1,7 @@
 import tensorflow as tf
 
+from smile.experiments.samples import multi_attribute_translation_samples
+from smile.experiments.summaries import img_summary_with_text
 from smile.losses import lsgan_losses
 from smile.models import Model
 
@@ -23,6 +25,7 @@ class StarGAN(Model):
                  classifier_discriminator_shared_fn,
                  classifier_private_fn,
                  discriminator_private_fn,
+                 adversarial_loss_fn,
                  **hparams):
 
         # TODO: Fix this implementation.
@@ -56,68 +59,104 @@ class StarGAN(Model):
             is_training=is_training,
             **hparams)
 
-        # Model parts.
         generator = tf.make_template("generator", generator_fn, is_training=is_training)
         classifier = lambda x: _c_private(_cd_shared(x))
         discriminator = lambda x: _d_private(_cd_shared(x))
 
         def generate_attributes(attributes):
-            # TODO
-            #target_attributes = \
-            #   tf.cast(tf.random_uniform(shape=tf.shape(attributes), dtype=tf.int32, maxval=2), tf.float32)
-            pass
+            # 50/50 sample per attribute.
+            return tf.cast(tf.random_uniform(shape=tf.shape(attributes), dtype=tf.int32, maxval=2), tf.float32)
 
         x = preprocess(img)
         target_attributes = generate_attributes(attributes)
         x_translated = generator(x, target_attributes)
         x_reconstructed = generator(x_translated, attributes)
+        target_attributes_test = generate_attributes(attributes_test)
+        x_test_translated = generator(preprocess(img_test), target_attributes_test)
 
-        # TODO: Paper uses wgan-gp loss.
-        # TODO: Take adversarial loss fn as input.
-        d_adversarial_loss, g_adversarial_loss = lsgan_losses(x, x_translated, discriminator)
-
-        d_classification_loss = tf.losses.sigmoid_cross_entropy(attributes, classifier(x))
-        g_classification_loss = tf.losses.sigmoid_cross_entropy(target_attributes, classifier(x_translated))
-
+        # Loss parts.
+        d_adversarial_loss, g_adversarial_loss = adversarial_loss_fn(x, x_translated, discriminator, **hparams)
+        real_classification_loss = tf.losses.sigmoid_cross_entropy(attributes, classifier(x))
+        fake_classification_loss = tf.losses.sigmoid_cross_entropy(target_attributes, classifier(x_translated))
         reconstruction_loss = tf.losses.absolute_difference(x, x_reconstructed)
 
         # Full objectives.
-        d_loss = d_adversarial_loss + hparams["lambda_cls"] * d_classification_loss
-        g_loss = g_adversarial_loss + hparams["lambda_cls"] * g_classification_loss \
-                 + hparams["lambda_rec"] * reconstruction_loss
+        d_loss = d_adversarial_loss + hparams["lambda_cls"] * real_classification_loss
+        g_loss = g_adversarial_loss + hparams["lambda_cls"] * fake_classification_loss + \
+                 hparams["lambda_rec"] * reconstruction_loss
+
+        d_vars = tf.trainable_variables("(classifier|discriminator)")
+        g_vars = tf.trainable_variables("generator")
+        assert (set(d_vars) & set(g_vars)) == set(), "D and G should not share variables."
+
+        # TODO: Should decay after 10 epochs.
+        learning_rate = 1e-4
+
+        def create_update_step(loss, variables):
+            return tf.train.AdamOptimizer(learning_rate, beta1=0.5).minimize(loss, var_list=variables)
+
+        d_update_step = create_update_step(d_loss, d_vars)
+        g_update_step = create_update_step(g_loss, g_vars)
 
         global_step = tf.train.get_or_create_global_step()
-
-        tvars = lambda scope: tf.trainable_variables(scope)
-        d_update_step = tf.train.AdamOptimizer(1e-4).minimize(d_loss, var_list=tvars("(classifier|discriminator)"))
-        g_update_step = tf.train.AdamOptimizer(1e-4).minimize(g_loss, var_list=tvars("generator"))
 
         # TODO: Don't group if using wgan loss.
         # TODO: Potentially run separately anyway?
         train_step = tf.group(d_update_step, g_update_step, global_step.assign_add(1))
 
         scalar_summaries = tf.summary.merge((
-            tf.summary.scalar("d_loss", d_loss),
-            tf.summary.scalar("g_loss", g_loss)
+            tf.summary.scalar("loss/d", d_loss),
+            tf.summary.scalar("loss/g", g_loss),
+            tf.summary.scalar("loss/d_adv", d_adversarial_loss),
+            tf.summary.scalar("loss/g_adv", g_adversarial_loss),
+            tf.summary.scalar("loss/real_cls", real_classification_loss),
+            tf.summary.scalar("loss/fake_cls", fake_classification_loss),
+            tf.summary.scalar("loss/rec", reconstruction_loss),
+
+            # TODO: Add d_real and d_fake
+            # TODO: Add accuracy for classifier
+
         ))
 
-        # TODO: Fix summaries.
+        image_summaries = tf.summary.merge((
+            img_summary_with_text(
+                "train",
+                attribute_names,
+                img, attributes,
+                postprocess(x_translated), target_attributes),
 
-        # TODO: Add target attributes to image summaries.
-        image_summaries = tf.summary.image("A_to_B", postprocess(tf.concat((imgs[:3], translated_imgs[:3]), axis=2)))
+            img_summary_with_text(
+                "test",
+                attribute_names,
+                img_test, attributes_test,
+                postprocess(x_test_translated), target_attributes_test)
+        ))
 
-        self.train_op = train_step
-        self.global_step = global_step
+        # Handles for training.
         self.is_training = is_training
+        self.global_step_increment = global_step.assign_add(1)
+        self.d_update_step = d_update_step
+        self.g_update_step = g_update_step
+        self.n_discriminator_iters = hparams["n_discriminator_iters"]
         self.scalar_summaries = scalar_summaries
         self.image_summaries = image_summaries
 
-    def train_step(self, sess, summary_writer):
-        feed_dict = {
-            self.is_training: True
-        }
+        # Handles for progress samples.
+        self.translation_samples = multi_attribute_translation_samples(
+            img_test_static,
+            attributes_test_static,
+            lambda x, a: postprocess(generator(preprocess(x), a)))
 
-        _, scalar_summaries, i = sess.run((self.train_op, self.scalar_summaries, self.global_step), feed_dict=feed_dict)
+        # Handles for exporting.
+        # TODO:
+
+    def train_step(self, sess, summary_writer):
+        for _ in range(self.n_discriminator_iters):
+            sess.run(self.d_update_step, feed_dict={self.is_training: True})
+
+        _, scalar_summaries, i = sess.run(
+            (self.g_update_step, self.scalar_summaries, self.global_step_increment),
+            feed_dict={self.is_training: True})
 
         summary_writer.add_summary(scalar_summaries, i)
 

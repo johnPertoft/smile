@@ -2,6 +2,8 @@ import tensorflow as tf
 
 import smile.models.stargan.architectures
 from smile.data import dataset_with_attributes
+from smile.losses import lsgan_losses
+from smile.losses import wgan_gp_losses
 from smile.models.stargan import StarGAN
 from smile import experiments
 
@@ -68,6 +70,16 @@ else:
     raise ValueError("Invalid model architecture.")
 
 
+if hparams["adversarial_loss_fn"] == "lsgan":
+    adversarial_loss_fn = lsgan_losses
+elif hparams["adversarial_loss_fn"] == "wgan-gp":
+    adversarial_loss_fn = wgan_gp_losses
+    hparams["n_discriminator_iters"] = 5
+    hparams["wgan_gp_lambda"] = 10.0
+else:
+    raise ValueError("Invalid adversarial loss fn.")
+
+
 stargan = StarGAN(
     attribute_names=args.considered_attributes,
     img=img_train,
@@ -80,6 +92,7 @@ stargan = StarGAN(
     classifier_discriminator_shared_fn=None,
     classifier_private_fn=None,
     discriminator_private_fn=None,
+    adversarial_loss_fn=adversarial_loss_fn,
     **hparams)
 
 
