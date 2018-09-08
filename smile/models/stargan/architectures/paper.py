@@ -1,149 +1,86 @@
+import functools
+
 import tensorflow as tf
 
-# TODO: Make sure this follow the paper described architecture.
+
+def conv(x, d, k, s, use_bias=False, padding="same"):
+    return tf.layers.conv2d(
+        x,
+        kernel_size=(k, k),
+        strides=(s, s),
+        filters=d,
+        activation=None,
+        kernel_initializer=tf.truncated_normal_initializer(stddev=0.02),
+        use_bias=use_bias,
+        padding=padding)
+
+
+def dconv(x, d, k, s, use_bias=False):
+    return tf.layers.conv2d_transpose(
+        x,
+        kernel_size=(k, k),
+        strides=(s, s),
+        filters=d,
+        activation=None,
+        kernel_initializer=tf.truncated_normal_initializer(stddev=0.02),
+        use_bias=use_bias,
+        padding="same")
+
+
+def res_block(x, d, k, norm, activation):
+    x_orig = x
+    x = activation(norm(conv(x, d, k, 1)))
+    x = norm(conv(x, d, k, 1))
+    return x + x_orig
 
 
 def generator(x, attributes, is_training, **hparams):
-    weight_initializer = tf.truncated_normal_initializer(stddev=0.02)
-
-    # TODO: depthwise concatenation of attributes.
-
-    def conv7_stride1_k(inputs, k):
-        padded = tf.pad(inputs, [[0, 0], [3, 3], [3, 3], [0, 0]], "reflect")
-        return tf.layers.conv2d(
-            padded,
-            kernel_size=(7, 7),
-            strides=(1, 1),
-            filters=k,
-            activation=None,
-            kernel_initializer=weight_initializer,
-            use_bias=False,
-            padding="valid")
-
-    def conv3_stride2_k(inputs, k):
-        return tf.layers.conv2d(
-            inputs,
-            kernel_size=(3, 3),
-            strides=(2, 2),
-            filters=k,
-            activation=None,
-            kernel_initializer=weight_initializer,
-            use_bias=False,
-            padding="same")
-
-    def res_block(inputs, k):
-        # Layer 1.
-        padded1 = tf.pad(inputs, [[0, 0], [1, 1], [1, 1], [0, 0]], "reflect")
-        conv1 = tf.layers.conv2d(
-            padded1,
-            kernel_size=(3, 3),
-            strides=(1, 1),
-            filters=k,
-            activation=None,
-            kernel_initializer=weight_initializer,
-            use_bias=False,
-            padding="valid")
-        normalized1 = tf.contrib.layers.instance_norm(conv1)
-        relu1 = tf.nn.relu(normalized1)
-
-        # Layer 2.
-        padded2 = tf.pad(relu1, [[0, 0], [1, 1], [1, 1], [0, 0]], "reflect")
-        conv2 = tf.layers.conv2d(
-            padded2,
-            kernel_size=(3, 3),
-            strides=(1, 1),
-            filters=k,
-            activation=None,
-            kernel_initializer=weight_initializer,
-            use_bias=False,
-            padding="valid")
-        normalized2 = tf.contrib.layers.instance_norm(conv2)
-        return inputs + normalized2
-
-    def deconv3_stride2_k(inputs, k):
-        return tf.layers.conv2d_transpose(
-            inputs,
-            kernel_size=(3, 3),
-            strides=(2, 2),
-            filters=k,
-            activation=None,
-            kernel_initializer=weight_initializer,
-            use_bias=False,
-            padding="same")
-
-    relu = tf.nn.relu
-    norm = tf.contrib.layers.instance_norm
-
     def concat_attributes(x, attributes):
         c = attributes[:, tf.newaxis, tf.newaxis, :]
         h, w = x.get_shape()[1:3]
         c = tf.tile(c, (1, h, w, 1))
         return tf.concat((x, c), axis=3)
 
+    activation = tf.nn.relu
+    norm = tf.contrib.layers.instance_norm
+
     # Net definition.
     net = concat_attributes(x, attributes)
-    net = relu(norm(conv7_stride1_k(net, 32)))
-    net = relu(norm(conv3_stride2_k(net, 64)))
-    net = relu(norm(conv3_stride2_k(net, 128)))
-    for i in range(6):
-        net = res_block(net, 128)
-    net = relu(norm(deconv3_stride2_k(net, 64)))
-    net = relu(norm(deconv3_stride2_k(net, 32)))
-    net = tf.nn.tanh(conv7_stride1_k(net, 3))
+    net = activation(norm(conv(net, 64, 7, 1)))
+    net = activation(norm(conv(net, 128, 4, 2)))
+    net = activation(norm(conv(net, 256, 4, 2)))
+    for _ in range(6):
+        res_block(net, 256, 3, norm, activation)
+    net = activation(norm(dconv(net, 128, 4, 2)))
+    net = activation(norm(dconv(net, 64, 4, 2)))
+    net = tf.nn.tanh(conv(net, 3, 7, 1))
 
     return net
 
 
 def classifier_discriminator_shared(x, is_training, **hparams):
-    weight_initializer = tf.truncated_normal_initializer(stddev=0.02)
+    activation = functools.partial(tf.nn.leaky_relu, alpha=0.01)
 
-    def conv4_stride2_k(inputs, k):
-        return tf.layers.conv2d(
-            inputs,
-            kernel_size=(4, 4),
-            strides=(2, 2),
-            filters=k,
-            activation=None,
-            kernel_initializer=weight_initializer,
-            use_bias=False,
-            padding="same")
-
-    lrelu = tf.nn.leaky_relu
-    norm = tf.contrib.layers.instance_norm
-
-    # TODO: See paper.
-
-    # Net definition.
     net = x
-    net = lrelu(conv4_stride2_k(net, 64))
-    net = lrelu(norm(conv4_stride2_k(net, 128)))
-    net = lrelu(norm(conv4_stride2_k(net, 256)))
-    net = lrelu(norm(conv4_stride2_k(net, 512)))
+    net = activation(conv(net, 64, 4, 2, use_bias=True))
+    net = activation(conv(net, 128, 4, 2, use_bias=True))
+    net = activation(conv(net, 256, 4, 2, use_bias=True))
+    net = activation(conv(net, 512, 4, 2, use_bias=True))
+    net = activation(conv(net, 1014, 4, 2, use_bias=True))
+    net = activation(conv(net, 2048, 4, 2, use_bias=True))
+
+    # TODO: Maybe remove some layers for 128x128?
 
     return net
 
 
 def classifier_private(h, n_attributes, is_training, **hparams):
-    logits = tf.layers.conv2d(
-        h,
-        kernel_size=(4, 4),
-        strides=(1, 1),
-        filters=n_attributes,
-        activation=None,
-        padding="same")
-    logits = tf.reduce_mean(logits, axis=[1, 2])  # Global average pooling.
-
+    k = h.get_shape()[1]
+    logits = conv(h, n_attributes, k, 1, padding="valid")
+    logits = tf.squeeze(logits, axis=[1, 2])
     return logits
 
 
 def discriminator_private(h, is_training, **hparams):
-    # Patch GAN output for whether discriminator thinks the image is real/fake.
-    disc = tf.layers.conv2d(
-        h,
-        kernel_size=(4, 4),
-        strides=(1, 1),
-        filters=1,
-        activation=None,
-        padding="same")
-
-    return disc
+    logits = conv(h, 1, 3, 1)
+    return logits

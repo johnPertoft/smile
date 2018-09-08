@@ -1,3 +1,5 @@
+import numpy as np
+import skimage.io
 import tensorflow as tf
 
 from smile.experiments.samples import multi_attribute_translation_samples
@@ -151,6 +153,12 @@ class StarGAN(Model):
             summary_writer.add_summary(image_summaries, i)
 
         return i
+
+    def generate_samples(self, sess, fname):
+        img = sess.run(self.translation_samples)
+        img = np.vstack([np.hstack(x) for x in img])
+        skimage.io.imsave(fname, img)
+        # TODO: Add attribute names for rows.
 
     def export(self, sess, export_dir):
         pass
