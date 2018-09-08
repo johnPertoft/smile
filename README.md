@@ -47,6 +47,50 @@ TODO: Show results.
 ### UNIT
 TODO: Show results.
 
+### Celeb-A attribute ratios
+| | On | Off |
+|---|---:|---:|
+| 5_o_Clock_Shadow | 0.111 | 0.889 |
+| Arched_Eyebrows | 0.267 | 0.733 |
+| Attractive | 0.513 | 0.487 |
+| Bags_Under_Eyes | 0.205 | 0.795 |
+| Bald | 0.022 | 0.978 |
+| Bangs | 0.152 | 0.848 |
+| Big_Lips | 0.241 | 0.759 |
+| Big_Nose | 0.235 | 0.765 |
+| Black_Hair | 0.239 | 0.761 |
+| Blond_Hair | 0.148 | 0.852 |
+| Blurry | 0.051 | 0.949 |
+| Brown_Hair | 0.205 | 0.795 |
+| Bushy_Eyebrows | 0.142 | 0.858 |
+| Chubby | 0.058 | 0.942 |
+| Double_Chin | 0.047 | 0.953 |
+| Eyeglasses | 0.065 | 0.935 |
+| Goatee | 0.063 | 0.937 |
+| Gray_Hair | 0.042 | 0.958 |
+| Heavy_Makeup | 0.387 | 0.613 |
+| High_Cheekbones | 0.455 | 0.545 |
+| Male | 0.417 | 0.583 |
+| Mouth_Slightly_Open | 0.483 | 0.517 |
+| Mustache | 0.042 | 0.958 |
+| Narrow_Eyes | 0.115 | 0.885 |
+| No_Beard | 0.835 | 0.165 |
+| Oval_Face | 0.284 | 0.716 |
+| Pale_Skin | 0.043 | 0.957 |
+| Pointy_Nose | 0.277 | 0.723 |
+| Receding_Hairline | 0.08 | 0.92 |
+| Rosy_Cheeks | 0.066 | 0.934 |
+| Sideburns | 0.057 | 0.943 |
+| Smiling | 0.482 | 0.518 |
+| Straight_Hair | 0.208 | 0.792 |
+| Wavy_Hair | 0.32 | 0.68 |
+| Wearing_Earrings | 0.189 | 0.811 |
+| Wearing_Hat | 0.048 | 0.952 |
+| Wearing_Lipstick | 0.472 | 0.528 |
+| Wearing_Necklace | 0.123 | 0.877 |
+| Wearing_Necktie | 0.073 | 0.927 |
+| Young | 0.774 | 0.226 |
+
 ## TODO
 * Better results images per model. Show results at different timesteps.
 * Add evaluation method based on classifier of identities? sort of like inception score
