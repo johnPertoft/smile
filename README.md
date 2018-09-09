@@ -42,7 +42,16 @@ $ python -m smile.models.attgan.train \
 [See more results and commands to recreate](results/attgan/results.md)
 
 ### StarGAN
-TODO: Show results.
+```bash
+$ python -m smile.models.stargan.train \
+    --train-tfrecords datasets/celeb/tfrecords/all_attributes/train/* \
+    --test-tfrecords datasets/celeb/tfrecords/all_attributes/test/* \
+    --considered-attributes Smiling Male Mustache Blond_Hair
+```
+
+![stargan](results/stargan/runs/paper-architecture-wgan-gp-lambda-rec-10.0-lambda-cls-1.0/testsamples_final.png)
+
+[See more results and commands to recreate](results/stargan/results.md)
 
 ### UNIT
 TODO: Show results.
@@ -99,7 +108,7 @@ TODO: Show results.
 - [x] CycleGAN
 - [x] AttGAN
 - [x] UNIT (bad results, needs work)
-- [x] StarGAN (bad results, needs work)
+- [x] StarGAN
 - [ ] Augmented CycleGAN
 - [ ] Sparsely Grouped GAN
 - [ ] Fusion GAN
