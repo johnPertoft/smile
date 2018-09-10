@@ -3,66 +3,93 @@ from typing import List
 
 import tensorflow as tf
 
-from smile.models.unit.architectures.celeb import paper
-from smile.models.unit.input import celeb_input_fn
-from smile.models.unit.model import UNIT
+import smile.models.unit.architectures
 from smile import experiments
+from smile.data import dataset
+from smile.losses import lsgan_losses
+from smile.losses import non_saturating_gan_losses
+from smile.losses import wgan_gp_losses
+from smile.models.unit import UNIT
 
 
-def run_training(model_dir: Path,
-                 X_train_paths: List[Path],
-                 X_test_paths: List[Path],
-                 Y_train_paths: List[Path],
-                 Y_test_paths: List[Path],
-                 **hparams):
-
-    model_dir.mkdir(parents=True, exist_ok=True)
-
-    unit = UNIT(
-        celeb_input_fn(X_train_paths, batch_size=hparams["batch_size"]),
-        celeb_input_fn(X_test_paths, batch_size=8),
-        celeb_input_fn(Y_train_paths, batch_size=hparams["batch_size"]),
-        celeb_input_fn(Y_test_paths, batch_size=8),
-        paper.private_encoder, paper.shared_encoder,
-        paper.shared_decoder, paper.private_decoder,
-        paper.discriminator,
-        **hparams)
-
-    summary_writer = tf.summary.FileWriter(str(model_dir))
-
-    with tf.train.MonitoredTrainingSession(checkpoint_dir=str(model_dir), save_summaries_secs=30) as sess:
-        while not sess.should_stop():
-            unit.train_step(sess, summary_writer)
+tf.logging.set_verbosity(tf.logging.INFO)
 
 
-if __name__ == "__main__":
-    arg_parser = experiments.ArgumentParser()
-    arg_parser.add_argument("--model-dir", required=False, help="Directory for checkpoints etc.")
-    arg_parser.add_argument("--X-train", nargs="+", required=True, help="Tfrecord train files for first image domain.")
-    arg_parser.add_argument("--X-test", nargs="+", required=True, help="Tfrecord test files for first image domain.")
-    arg_parser.add_argument("--Y-train", nargs="+", required=True, help="Tfrecord train files for second image domain.")
-    arg_parser.add_argument("--Y-test", nargs="+", required=True, help="Tfrecord test files for second image domain.")
+arg_parser = experiments.ArgumentParser()
+arg_parser.add_argument("--model-dir", required=False, help="Directory for checkpoints etc.")
+arg_parser.add_argument("--x-train", nargs="+", required=True, help="Tfrecord train files for first image domain.")
+arg_parser.add_argument("--x-test", nargs="+", required=True, help="Tfrecord test files for first image domain.")
+arg_parser.add_argument("--y-train", nargs="+", required=True, help="Tfrecord train files for second image domain.")
+arg_parser.add_argument("--y-test", nargs="+", required=True, help="Tfrecord test files for second image domain.")
+arg_parser.add_argument("--steps", default=200000, type=int, help="Number of train steps.")
 
-    arg_parser.add_hparam("batch-size", default=8, type=int, help="Batch size.")
-    arg_parser.add_hparam("lambda_vae_kl", default=0.1, type=float, help="Weight of KL divergence in VAE loss.")
-    arg_parser.add_hparam("lambda_vae_nll", default=100.0, type=float, help="Weight of reconstruction in VAE loss.")
-    arg_parser.add_hparam("lambda_gan", default=10.0, type=float, help="Weight for GAN losses.")
-    arg_parser.add_hparam("lambda_cyclic_kl", default=0.1, type=float, help="Weight of KL divergence in cyclic loss.")
-    arg_parser.add_hparam("lambda_cyclic_nll", default=100.0, type=float,
-                          help="Weight of reconstruction in cyclic loss.")
+arg_parser.add_hparam("--batch_size", default=16, type=int, help="Batch size.")
+arg_parser.add_hparam("--model_architecture", default="paper", help="Model architecture.")
+arg_parser.add_hparam("--adversarial_loss", default="xxx", type=str, help="Adversarial loss function to use.")
+arg_parser.add_hparam("lambda_vae_kl", default=0.1, type=float, help="Weight of KL divergence in VAE loss.")
+arg_parser.add_hparam("lambda_vae_rec", default=100.0, type=float, help="Weight of reconstruction in VAE loss.")
+arg_parser.add_hparam("lambda_adv", default=10.0, type=float, help="Weight for adversarial losses.")
+arg_parser.add_hparam("lambda_cyclic_kl", default=0.1, type=float, help="Weight of KL divergence in cyclic loss.")
+arg_parser.add_hparam("lambda_cyclic_rec", default=100.0, type=float, help="Weight of reconstruction in cyclic loss.")
 
-    args, hparams = arg_parser.parse_args()
+args, hparams = arg_parser.parse_args()
 
-    ROOT_RUNS_DIR = Path("runs")
-    if args.model_dir is None:
-        model_dir = ROOT_RUNS_DIR / Path(experiments.experiment_name("unit", hparams))
-    else:
-        model_dir = Path(args.model_dir)
 
-    run_training(
-        model_dir,
-        args.X_train,
-        args.X_test,
-        args.Y_train,
-        args.Y_test,
-        **hparams)
+def input_fn(paths, batch_size):
+    ds = dataset(paths, crop_and_rescale=True)
+    ds = ds.shuffle(1024)
+    ds = ds.repeat(None)
+    ds = ds.batch(batch_size)
+    ds = ds.prefetch(2)
+    img = ds.make_one_shot_iterator().get_next()
+    return img
+
+
+def first_n(paths, n):
+    ds = dataset(paths, crop_and_rescale=True)
+    ds = ds.batch(n)
+    ds = ds.take(1)
+    ds = ds.repeat(None)
+    img = ds.make_one_shot_iterator().get_next()
+    return img
+
+
+if hparams["model_architecture"] == "paper":
+    model_architecture = smile.models.unit.architectures.paper
+else:
+    raise ValueError("Invalid model architecture.")
+
+
+if hparams["adversarial_loss"] == "lsgan":
+    adversarial_loss_fn = lsgan_losses
+    hparams["n_discriminator_iters"] = 1
+elif hparams["adversarial_loss"] == "nsgan":
+    adversarial_loss_fn = non_saturating_gan_losses
+    hparams["n_discriminator_iters"] = 1
+elif hparams["adversarial_loss"] == "wgan-gp":
+    adversarial_loss_fn = wgan_gp_losses
+    hparams["n_discriminator_iters"] = 5
+    hparams["wgan_gp_lambda"] = 10.0
+else:
+    raise ValueError("Invalid adversarial loss fn.")
+
+
+unit = UNIT(
+    a_train=input_fn(args.x_train, hparams["batch_size"]),
+    a_test=input_fn(args.x_test, 3),
+    a_test_static=first_n(args.x_test, 10),
+    b_train=input_fn(args.y_train, hparams["batch_size"]),
+    b_test=input_fn(args.y_test, 3),
+    b_test_static=first_n(args.y_test, 10),
+    private_encoder_fn=model_architecture.encoder_private,
+    shared_encoder_fn=model_architecture.encoder_shared,
+    shared_decoder_fn=model_architecture.decoder_shared,
+    private_decoder_fn=model_architecture.decoder_private,
+    adversarial_loss_fn=adversarial_loss_fn,
+    **hparams)
+
+
+experiments.run_experiment(
+    model_dir=experiments.ROOT_RUNS_DIR / experiments.experiment_name("unit", hparams),
+    model=unit,
+    n_training_step=args.steps)
