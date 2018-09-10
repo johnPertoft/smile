@@ -20,6 +20,7 @@ class CycleGAN(Model):
         def postprocess(x):
             return (x + 1) / 2
 
+        # TODO: Remove this default value. Specify on each invocation instead?
         is_training = tf.placeholder_with_default(False, [])
 
         discriminator_a = tf.make_template("discriminator_a", discriminator_fn, is_training=is_training, **hparams)

@@ -27,9 +27,6 @@ arg_parser.add_hparam("--lambda_cyclic", default=5.0, type=float, help="Cyclic c
 arg_parser.add_hparam("--use_history", action="store_true",
                       help="Whether a history of generated images should be shown to the discriminator.")
 
-# Conditional hparams.
-arg_parser.add_hparam("growth-rate", default=16, type=int, help="Growth rate for densenet architecture.")
-
 args, hparams = arg_parser.parse_args()
 
 

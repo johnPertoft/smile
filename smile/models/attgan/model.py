@@ -27,7 +27,7 @@ class AttGAN(Model):
         def postprocess(x):
             return (x + 1) / 2
 
-        # TODO: Decide if we should keep this. Could just call encoder/decoder with is_training=False/True.
+        # TODO: Remove this default value. Specify on each invocation instead?
         is_training = tf.placeholder_with_default(False, [])
 
         n_classes = attributes.shape[1].value
