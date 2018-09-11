@@ -28,3 +28,16 @@ def _data_augmentation(img, *args):
         ds = ds.concatenate(tf.data.Dataset.from_tensors(fn(img)))
 
     return ds
+
+
+# TODO: Want a function that returns a function that is compatible with tf.data.Dataset.apply.
+
+
+def make_data_augmentation():
+
+    def data_augmentation(ds):
+        # TODO: apply all augment fns here.
+        pass
+
+    return data_augmentation
+

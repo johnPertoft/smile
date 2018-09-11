@@ -1,15 +1,7 @@
 import tensorflow as tf
 
 from smile.models import Model
-from smile.models.experimental import networks
-
-
-def preprocess(x):
-    return x * 2 - 1
-
-
-def postprocess(x):
-    return (x + 1) / 2
+from smile.models.experimental.sa_attgan import networks
 
 
 # TODO: attgan + self attention and spectral normalization
@@ -21,9 +13,15 @@ class SelfAttentionAttGAN(Model):
                  attribute_names,
                  img, attributes,
                  img_test, attributes_test,
+                 img_test_static, attributes_test_static,
+                 adversarial_loss_fn,
                  **hparams):
 
-        # TODO: Take adversarial loss fn as input.
+        def preprocess(x):
+            return x * 2 - 1
+
+        def postprocess(x):
+            return (x + 1) / 2
 
         is_training = tf.placeholder_with_default(False, [])
         _, n_classes = attributes.get_shape()
@@ -45,6 +43,7 @@ class SelfAttentionAttGAN(Model):
             is_training=is_training,
             **hparams)
 
+        # TODO: Take these architectures as input instead. But reuse architectures from attgan module?
         # Model parts.
         encode = tf.make_template("encoder", networks.encoder, is_training=is_training, **hparams)
         decode = tf.make_template("decoder", networks.decoder, is_training=is_training, **hparams)

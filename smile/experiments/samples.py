@@ -4,8 +4,20 @@ from typing import Tuple
 import tensorflow as tf
 
 
+def translation_samples(a: tf.Tensor,
+                        b: tf.Tensor,
+                        translate_ab_fn: Callable[[tf.Tensor], tf.Tensor],
+                        translate_ba_fn: Callable[[tf.Tensor], tf.Tensor]):
+    ab_translations = tf.concat((a, translate_ab_fn(a)), axis=2)
+    ba_translations = tf.concat((b, translate_ba_fn(b)), axis=2)
+
+    # TODO: Keep this fn? Maybe a bit point less?
+
+    return tf.concat((ab_translations, ba_translations), axis=2)
+
+
 def _repeat_elements(x, n):
-    # Assumes first dimension is batch dimension.
+    # Repeats elements along the 0th axis.
     element_shape = x.get_shape().as_list()[1:]
     return tf.reshape(tf.tile(x, [1, n] + [1] * (len(element_shape) - 1)), [-1] + element_shape)
 
