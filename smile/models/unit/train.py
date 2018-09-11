@@ -25,7 +25,7 @@ arg_parser.add_argument("--steps", default=200000, type=int, help="Number of tra
 
 arg_parser.add_hparam("--batch_size", default=16, type=int, help="Batch size.")
 arg_parser.add_hparam("--model_architecture", default="paper", help="Model architecture.")
-arg_parser.add_hparam("--adversarial_loss", default="xxx", type=str, help="Adversarial loss function to use.")
+arg_parser.add_hparam("--adversarial_loss", default="nsgan", type=str, help="Adversarial loss function to use.")
 arg_parser.add_hparam("lambda_vae_kl", default=0.1, type=float, help="Weight of KL divergence in VAE loss.")
 arg_parser.add_hparam("lambda_vae_rec", default=100.0, type=float, help="Weight of reconstruction in VAE loss.")
 arg_parser.add_hparam("lambda_adv", default=10.0, type=float, help="Weight for adversarial losses.")
@@ -85,6 +85,7 @@ unit = UNIT(
     shared_encoder_fn=model_architecture.encoder_shared,
     shared_decoder_fn=model_architecture.decoder_shared,
     private_decoder_fn=model_architecture.decoder_private,
+    discriminator_fn=model_architecture.discriminator,
     adversarial_loss_fn=adversarial_loss_fn,
     **hparams)
 

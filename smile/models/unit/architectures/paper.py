@@ -30,11 +30,9 @@ def dconv(x, d, k, s, use_bias=False):
 
 
 def res_block(x, d, k, norm, activation):
-    # TODO: reflect pad?
-    # TODO: paper code uses two convs here.
     x_orig = x
     x = activation(norm(conv(x, d, k, 1)))
-    x = norm(conv(x, d, k, 1))
+    x = norm(conv(x, x_orig.shape[-1], k, 1))
     return x + x_orig
 
 
@@ -84,5 +82,20 @@ def decoder_private(h, is_training, **hparams):
     net = norm(activation(dconv(net, 256, 3, 2)))
     net = norm(activation(dconv(net, 128, 3, 2)))
     net = tf.nn.tanh(dconv(net, 3, 1, 1))
+
+    return net
+
+
+def discriminator(x, is_training, **hparams):
+    activation = functools.partial(tf.nn.leaky_relu, alpha=0.2)
+    norm = lambda x: x
+
+    net = x
+    net = norm(activation(conv(net, 64, 3, 2)))
+    net = norm(activation(conv(net, 128, 3, 2)))
+    net = norm(activation(conv(net, 256, 3, 2)))
+    net = norm(activation(conv(net, 512, 3, 2)))
+    net = norm(activation(conv(net, 1024, 3, 2)))
+    net = conv(net, 1, 2, 1)
 
     return net
