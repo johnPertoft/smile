@@ -100,8 +100,11 @@ TODO: Show results.
 | Wearing_Necktie | 0.073 | 0.927 |
 | Young | 0.774 | 0.226 |
 
+### Celeb-A attribute correlations
+![celeb-a-correlation](pics/celeb-attr-corr.png)
+
 ## TODO
-* Better results images per model. Show results at different timesteps.
+* Add gif of progress samples.
 * Add evaluation method based on classifier of identities? sort of like inception score
 
 ### Models / Papers
