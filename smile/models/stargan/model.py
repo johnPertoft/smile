@@ -20,17 +20,12 @@ class StarGAN(Model):
                  adversarial_loss_fn,
                  **hparams):
 
-        # TODO: Fix this implementation.
-        # TODO: Add support for training with facial expression dataset at the same time.
-            # Mask vector implementation etc.
-
         def preprocess(x):
             return x * 2 - 1
 
         def postprocess(x):
             return (x + 1) / 2
 
-        # TODO: Remove this default value. Specify on each invocation instead?
         is_training = tf.placeholder_with_default(False, [])
 
         n_attributes = attributes.shape[1].value
@@ -143,10 +138,9 @@ class StarGAN(Model):
         for _ in range(self.n_discriminator_iters):
             sess.run(self.d_update_step, feed_dict={self.is_training: True})
 
-        _, scalar_summaries, i = sess.run(
-            (self.g_update_step, self.scalar_summaries, self.global_step_increment),
-            feed_dict={self.is_training: True})
+        _, i = sess.run((self.g_update_step, self.global_step_increment), feed_dict={self.is_training: True})
 
+        scalar_summaries = sess.run(self.scalar_summaries)
         summary_writer.add_summary(scalar_summaries, i)
 
         if i > 0 and i % 1000 == 0:

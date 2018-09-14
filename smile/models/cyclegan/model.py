@@ -20,7 +20,6 @@ class CycleGAN(Model):
         def postprocess(x):
             return (x + 1) / 2
 
-        # TODO: Remove this default value. Specify on each invocation instead?
         is_training = tf.placeholder_with_default(False, [])
 
         discriminator_a = tf.make_template("discriminator_a", discriminator_fn, is_training=is_training, **hparams)
@@ -123,7 +122,6 @@ class CycleGAN(Model):
             postprocess(generator_ab(preprocess(a_test_static)))),
             axis=2)
 
-        # TODO: Are placeholders needed?
         # Handles for exporting.
         self.a_input = tf.placeholder(tf.float32, [None] + a_train.get_shape().as_list()[1:])
         self.b_translated = postprocess(generator_ab(preprocess(self.a_input)))
@@ -134,10 +132,9 @@ class CycleGAN(Model):
         for _ in range(self.n_discriminator_iters):
             sess.run(self.d_update_step, feed_dict={self.is_training: True})
 
-        _, scalar_summaries, i = sess.run(
-            (self.g_update_step, self.scalar_summaries, self.global_step_increment),
-            feed_dict={self.is_training: True})
+        _, i = sess.run((self.g_update_step, self.global_step_increment), feed_dict={self.is_training: True})
 
+        scalar_summaries = sess.run(self.scalar_summaries)
         summary_writer.add_summary(scalar_summaries, i)
 
         if i > 0 and i % 1000 == 0:

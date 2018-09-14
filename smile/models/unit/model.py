@@ -1,3 +1,5 @@
+import numpy as np
+import skimage.io
 import tensorflow as tf
 
 from smile.experiments.summaries import img_summary
@@ -22,7 +24,6 @@ class UNIT(Model):
         def postprocess(x):
             return (x + 1) / 2
 
-        # TODO: Remove this default value. Specify on each invocation instead?
         is_training = tf.placeholder_with_default(False, [])
 
         _encoder_a_private = tf.make_template(
@@ -63,6 +64,8 @@ class UNIT(Model):
         discriminator_a = tf.make_template("discriminator_a", discriminator_fn, is_training=is_training, **hparams)
         discriminator_b = tf.make_template("discriminator_b", discriminator_fn, is_training=is_training, **hparams)
 
+        # TODO: Maybe make the z dimension bigger?
+
         def sample_z(z_mu):
             return z_mu + tf.random_normal(tf.shape(z_mu), stddev=1.0)
 
@@ -77,10 +80,12 @@ class UNIT(Model):
         ab_translated = translate_ab(a)
         ba_translated = translate_ba(b)
 
+        # TODO: Issues with nsgan? Or with architecture?
+
         # TODO: Ok to use different z samples for different parts of the loss?
             # Closer to loss functions as defined in paper.
             # Cleaner implementation.
-            # Downsides?
+            # Downsides? Harder to train?
 
         # Loss parts.
         vae_a_loss = vae_loss(a, encoder_a, decoder_a, sample_z, **hparams)
@@ -107,11 +112,12 @@ class UNIT(Model):
 
         global_step = tf.train.get_or_create_global_step()
 
+        # TODO: Show kl vs reconstruction losses?
         scalar_summaries = tf.summary.merge((
             tf.summary.scalar("loss/d_a_loss", d_a_loss),
             tf.summary.scalar("loss/d_b_loss", d_b_loss),
             tf.summary.scalar("loss/enc_dec_loss", enc_dec_loss),
-            tf.summary.scalar("loss/parts/vae_a", vae_a_loss),  # TODO: Show kl vs reconstruction losses?
+            tf.summary.scalar("loss/parts/vae_a", vae_a_loss),
             tf.summary.scalar("loss/parts/vae_b", vae_b_loss),
             tf.summary.scalar("loss/parts/g_a", g_a_loss),
             tf.summary.scalar("loss/parts/g_b", g_b_loss),
@@ -127,6 +133,8 @@ class UNIT(Model):
         image_summaries = tf.summary.merge((
             img_summary("a_to_b_train", a_train, postprocess(ab_translated)),
             img_summary("b_to_a_train", b_train, postprocess(ba_translated)),
+            img_summary("a_to_a_train", a_train, postprocess(decoder_a(sample_z(encoder_a(a))))),
+            img_summary("b_to_b_train", b_train, postprocess(decoder_b(sample_z(encoder_b(b))))),
             img_summary("a_to_b_test", a_test, postprocess(translate_ab(preprocess(a_test)))),
             img_summary("b_to_a_test", b_test, postprocess(translate_ba(preprocess(b_test))))
         ))
@@ -150,7 +158,6 @@ class UNIT(Model):
             postprocess(translate_ab(preprocess(a_test_static)))),
             axis=2)
 
-        # TODO: Are placeholders needed?
         # Handles for exporting.
         self.a_input = tf.placeholder(tf.float32, [None] + a_train.get_shape().as_list()[1:])
         self.ab_translated = postprocess(translate_ab(preprocess(self.a_input)))
@@ -161,10 +168,9 @@ class UNIT(Model):
         for _ in range(self.n_discriminator_iters):
             sess.run(self.d_update_step, feed_dict={self.is_training: True})
 
-        _, scalar_summaries, i = sess.run(
-            (self.enc_dec_update_step, self.scalar_summaries, self.global_step_increment),
-            feed_dict={self.is_training: True})
+        _, i = sess.run((self.enc_dec_update_step, self.global_step_increment), feed_dict={self.is_training: True})
 
+        scalar_summaries = sess.run(self.scalar_summaries)
         summary_writer.add_summary(scalar_summaries, i)
 
         if i > 0 and i % 1000 == 0:
@@ -172,6 +178,11 @@ class UNIT(Model):
             summary_writer.add_summary(image_summaries, i)
 
         return i
+
+    def generate_samples(self, sess, fname):
+        ba, ab = sess.run((self.ba_translated_sample, self.ab_translated_sample))
+        img = np.vstack(np.concatenate((ab, ba), axis=2))
+        skimage.io.imsave(fname, img)
 
     def export(self, sess, export_dir):
         builder = tf.saved_model.builder.SavedModelBuilder(export_dir)

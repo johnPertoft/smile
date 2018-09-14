@@ -88,6 +88,7 @@ class AttGAN(Model):
 
         global_step = tf.train.get_or_create_global_step()
 
+        # TODO: Make sure this is correct.
         initial_learning_rate = 2e-4
         dataset_size = 180000
         steps_per_epoch = dataset_size // hparams["batch_size"]
@@ -168,10 +169,9 @@ class AttGAN(Model):
         for _ in range(self.n_discriminator_iters):
             sess.run(self.disc_cls_train_step, feed_dict={self.is_training: True})
 
-        _, scalar_summaries, i = sess.run(
-            (self.enc_dec_train_step, self.scalar_summaries, self.global_step_increment),
-            feed_dict={self.is_training: True})
+        _, i = sess.run((self.enc_dec_train_step, self.global_step_increment), feed_dict={self.is_training: True})
 
+        scalar_summaries = sess.run(self.scalar_summaries)
         summary_writer.add_summary(scalar_summaries, i)
 
         if i > 0 and i % 1000 == 0:
