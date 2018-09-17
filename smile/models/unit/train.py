@@ -16,7 +16,7 @@ tf.logging.set_verbosity(tf.logging.INFO)
 
 
 arg_parser = experiments.ArgumentParser()
-arg_parser.add_argument("--model-dir", required=False, help="Directory for checkpoints etc.")
+arg_parser.add_argument("--model-dir", required=False, type=Path, help="Directory for checkpoints etc.")
 arg_parser.add_argument("--x-train", nargs="+", required=True, help="Tfrecord train files for first image domain.")
 arg_parser.add_argument("--x-test", nargs="+", required=True, help="Tfrecord test files for first image domain.")
 arg_parser.add_argument("--y-train", nargs="+", required=True, help="Tfrecord train files for second image domain.")
@@ -91,6 +91,6 @@ unit = UNIT(
 
 
 experiments.run_experiment(
-    model_dir=experiments.ROOT_RUNS_DIR / experiments.experiment_name("unit", hparams),
+    model_dir=args.model_dir or experiments.ROOT_RUNS_DIR / experiments.experiment_name("unit", hparams),
     model=unit,
     n_training_step=args.steps)

@@ -89,6 +89,6 @@ cyclegan = CycleGAN(
 
 
 experiments.run_experiment(
-    model_dir=experiments.ROOT_RUNS_DIR / experiments.experiment_name("cyclegan", hparams),
+    model_dir=args.model_dir or experiments.ROOT_RUNS_DIR / experiments.experiment_name("cyclegan", hparams),
     model=cyclegan,
     n_training_step=args.steps)

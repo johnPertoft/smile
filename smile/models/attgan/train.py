@@ -104,7 +104,7 @@ attgan = AttGAN(
 
 
 experiments.run_experiment(
-    model_dir=experiments.ROOT_RUNS_DIR / experiments.experiment_name("attgan", hparams),
+    model_dir=args.model_dir or experiments.ROOT_RUNS_DIR / experiments.experiment_name("attgan", hparams),
     model=attgan,
     n_training_step=args.steps,
     custom_init_op=init_op)
