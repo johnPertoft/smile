@@ -14,9 +14,13 @@ ROOT_RUNS_DIR = Path("runs")
 
 
 def experiment_name(modelname: str, hparams: Dict[str, Any]):
+    sep_char = ","
+    assert not (any(sep_char in k for k in hparams.keys()) or
+                any(sep_char in v for v in hparams.values() if type(v) is str)), \
+        f"Separation character '{sep_char}' was used in a hparam key or value."
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H.%M.%S')
-    hparams_string = "_".join(f"{k}={hparams[k]}" for k in sorted(hparams.keys()))
-    return f"{modelname}_{timestamp}_{hparams_string}"
+    hparams_string = sep_char.join(f"{k}={hparams[k]}" for k in sorted(hparams.keys()))
+    return sep_char.join([modelname, timestamp, hparams_string])
 
 
 class ArgumentParser(argparse.ArgumentParser):
@@ -67,6 +71,9 @@ def run_experiment(model_dir: Path,
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
+
+    # TODO: Fix restarting. The wrong checkpoint seems to be set by default?
+    # TODO: Also make sure the correct hparams are set (if necessary, in train scripts).
 
     with tf.train.MonitoredTrainingSession(
             scaffold=scaffold,
