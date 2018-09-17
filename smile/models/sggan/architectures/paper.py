@@ -2,6 +2,8 @@ import functools
 
 import tensorflow as tf
 
+from smile.ops import get_normalization_fn
+
 
 # TODO: Change initializer? Not specified in paper.
 
@@ -31,7 +33,6 @@ def dconv(x, d, k, s, use_bias=False):
 
 def res_block(x, d, k, norm, activation):
     # TODO: reflect pad?
-    # TODO: One or two convs?
     x_orig = x
     x = activation(norm(conv(x, d, k, 1)))
     x = norm(conv(x, d, k, 1))
@@ -41,12 +42,9 @@ def res_block(x, d, k, norm, activation):
 def encoder(x, is_training, **hparams):
 
     activation = tf.nn.relu
-    norm = tf.contrib.layers.instance_normalization
+    norm = get_normalization_fn("instancenorm", is_training)
 
-    # TODO: norm or activation first?
-    # TODO: make sure all models actually use the is_training in norm methods.
-        # Standardize implementations
-        # only a problem for batch norm, which we only use in attgan? check this
+    # TODO: norm or activation first? Paper says relu then norm, code the opposite
 
     net = x
     net = norm(activation(conv(net, 64, 7, 1)))
@@ -59,7 +57,7 @@ def encoder(x, is_training, **hparams):
 def bottleneck(z, is_training, **hparams):
 
     activation = tf.nn.relu
-    norm = tf.contrib.layers.instance_normalization
+    norm = get_normalization_fn("instancenorm", is_training)
 
     # TODO: norm or activation first in resblock?
     # TODO: One or two convs in resblock?
@@ -75,18 +73,21 @@ def bottleneck(z, is_training, **hparams):
     return net
 
 
-def decoder(z, x_orig, is_training, **hparams):
+def decoder(z, x_orig, n_attributes, is_training, **hparams):
 
     activation = tf.nn.relu
-    norm = tf.contrïb.layers.instance_normalization
+    norm = get_normalization_fn("instancenorm", is_training)
 
     net = z
     net = norm(activation(dconv(net, 128, 4, 2)))
-    net = norm(activation(dconv(net, 64, 4, 2)))
-    net = tf.concat((net, x_orig))
-    net = tf.nn.tanh(conv(net, 3, 7, 1))
 
-    return net
+    def decoder_head():
+        h = norm(activation(dconv(net, 64, 4, 2)))
+        h = tf.concat((h, x_orig))
+        h = tf.nn.tanh(conv(h, 3, 7, 1))
+        return h
+
+    return tuple(decoder_head() for _ in range(n_attributes))
 
 
 def classifier_discriminator_shared(x, is_training, **hparams):
