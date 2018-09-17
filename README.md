@@ -54,7 +54,18 @@ $ python -m smile.models.stargan.train \
 [See more results and commands to recreate](results/stargan/results.md)
 
 ### UNIT
-TODO: Show results.
+```bash
+$ python -m smile.models.unit.train \
+    --x-train datasets/celeb/tfrecords/smiling/train/* \
+    --x-test datasets/celeb/tfrecords/smiling/test/* \
+    --y-train datasets/celeb/tfrecords/not_smiling/train/* \
+    --y-test datasets/celeb/tfrecords/not_smiling/test/* \
+    --adversarial_loss lsgan
+```
+
+![unit](results/unit/runs/paper-settings-lsgan/testsamples_final.png)
+
+[See more results and commands to recreate](results/unit/results.md)
 
 ### Celeb-A attribute ratios
 | | On | Off |
