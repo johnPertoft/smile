@@ -1,6 +1,8 @@
 import tensorflow as tf
 
 
+# TODO: Maybe all of these should return fns just accepting d, k, s?
+
 def conv():
     # TODO: Mostly act as a pass through to normal tf conv
     # TODO: Add spectral norm options
@@ -12,6 +14,8 @@ def dconv():
 
 
 def res_block():
+    # TODO: Take conv and norm fns as input.
+    # TODO: Return resblock fn?
     pass
 
 

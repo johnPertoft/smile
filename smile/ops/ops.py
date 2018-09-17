@@ -1,3 +1,5 @@
+import functools
+
 import tensorflow as tf
 
 
@@ -19,8 +21,10 @@ def self_attention(x):
 
 def get_normalization_fn(type, is_training, **hparams):
     if type == "batchnorm":
-        pass
+        return functools.partial(tf.layers.batch_normalization, training=is_training, **hparams)
     elif type == "instancenorm":
-        pass
+        return functools.partial(tf.contrib.layers.instance_norm, **hparams)
+    elif type == "layernorm":
+        return functools.partial(tf.contrib.layers.layer_norm, **hparams)
     else:
         raise ValueError("Invalid normalization fn type.")
