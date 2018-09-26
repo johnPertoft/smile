@@ -27,7 +27,6 @@ class AttGAN(Model):
         def postprocess(x):
             return (x + 1) / 2
 
-        # TODO: Remove this default value. Specify on each invocation instead?
         is_training = tf.placeholder_with_default(False, [])
 
         n_classes = attributes.shape[1].value

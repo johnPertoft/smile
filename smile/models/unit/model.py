@@ -102,6 +102,8 @@ class UNIT(Model):
 
         learning_rate = 1e-4
 
+        # TODO: Add update_ops to train_step for all models.
+
         def create_update_step(loss, variables):
             return tf.train.AdamOptimizer(learning_rate, beta1=0.5).minimize(loss, var_list=variables)
 

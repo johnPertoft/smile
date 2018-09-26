@@ -3,7 +3,7 @@ import abc
 import tensorflow as tf
 
 
-class Model:
+class Model(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def train_step(self, sess: tf.Session, summary_writer: tf.summary.FileWriter):
         pass

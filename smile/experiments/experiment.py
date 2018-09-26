@@ -98,11 +98,3 @@ def run_experiment(model_dir: Path,
     with tf.Session() as sess:
         tf.train.Saver().restore(sess, tf.train.latest_checkpoint(str(model_dir)))
         model.export(sess, str(model_dir / "export"))
-
-    # TODO: Add standardized implementations of the following for easier experimentation
-    #   * Losses
-    #   * Architectures
-    #   * Regularization (e.g. gradient penalty)
-    #   * Normalization (e.g. spectral normalization)
-    #   * Etc, like self-attention layers.
-

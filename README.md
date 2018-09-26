@@ -145,3 +145,4 @@ $ python -m smile.models.unit.train \
 ### Engineering
 * Docker for reproducing. 
 * Add terraform/cloudformation scripts for cloud resource management.
+* Option to download dataset (and read from) cloud storage.
