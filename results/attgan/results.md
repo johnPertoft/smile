@@ -1,9 +1,6 @@
 # AttGAN Results
 These are results for some AttGAN experiments.
 
-* TODO: Specify the attributes used.
-* TODO: Rerun these without augmentation/fix augmentation?
-
 To see all attgan options:
 ```bash
 $ python -m smile.models.attgan.train --help

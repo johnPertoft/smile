@@ -1,8 +1,6 @@
 # CycleGAN Results
 These are results for some CycleGAN experiments.
 
-TODO: Make gif to show progress.
-
 To see all cyclegan options:
 ```bash
 $ python -m smile.models.cyclegan.train --help
