@@ -1,6 +1,8 @@
 ![travis](https://travis-ci.com/johnPertoft/smile.svg?branch=master)
 
-# :unamused: Smile :smile:
+# Smile
+*f: :unamused: &rarr; :smile:*
+
 This repository contains Tensorflow implementations of some models dealing with image translation. Here they are 
 applied to the problem of facial attribute editing (e.g. smile to non-smile and vice versa). Some models can only
 handle one attribute at a time and some can handle multiple.
