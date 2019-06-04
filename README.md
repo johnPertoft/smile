@@ -1,5 +1,3 @@
-![travis](https://travis-ci.com/johnPertoft/smile.svg?branch=master)
-
 # Smile
 *f: :unamused: &rarr; :smile:*
 
